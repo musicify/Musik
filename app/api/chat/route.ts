@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 // GET /api/chat - Get all chats for the current user
 export async function GET() {
   try {
-    const session = await auth();
+    const user = await getCurrentUser();
 
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -18,7 +18,7 @@ export async function GET() {
       where: {
         participants: {
           some: {
-            userId: session.user.id
+            userId: user.id
           }
         }
       },
@@ -66,9 +66,9 @@ export async function GET() {
 // POST /api/chat - Create a new chat
 export async function POST(request: Request) {
   try {
-    const session = await auth();
+    const user = await getCurrentUser();
 
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
     }
 
     // Ensure the current user is included in participants
-    const allParticipantIds = Array.from(new Set([session.user.id, ...participantIds]));
+    const allParticipantIds = Array.from(new Set([user.id, ...participantIds]));
 
     // Create the chat
     const chat = await db.chat.create({
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
         },
         messages: initialMessage ? {
           create: {
-            senderId: session.user.id,
+            senderId: user.id,
             content: initialMessage,
           }
         } : undefined

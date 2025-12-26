@@ -4,29 +4,24 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  SignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from "@clerk/nextjs";
+import {
   Music,
   ShoppingCart,
   Menu,
-  X,
-  User,
   LogIn,
-  ChevronDown,
   Headphones,
   Mic2,
   LayoutDashboard,
-  Settings,
-  LogOut,
   Bell,
   Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
@@ -50,9 +45,6 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  
-  // Mock auth state - replace with real auth
-  const isLoggedIn = false;
   const cartItemCount = 0;
 
   useEffect(() => {
@@ -149,73 +141,57 @@ export function Header() {
             </Link>
 
             {/* Auth */}
-            {isLoggedIn ? (
-              <>
-                {/* Notifications */}
+            <SignedIn>
+              {/* Notifications */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative text-muted-foreground hover:text-foreground"
+              >
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
+              </Button>
+
+              {/* Dashboard Link */}
+              <Link href="/dashboard">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="relative text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground"
                 >
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
+                  <LayoutDashboard className="w-5 h-5" />
                 </Button>
+              </Link>
 
-                {/* User Menu */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                        <User className="w-4 h-4" />
-                      </div>
-                      <ChevronDown className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <div className="px-3 py-2">
-                      <p className="text-sm font-medium">Max Mustermann</p>
-                      <p className="text-xs text-muted-foreground">
-                        max@example.com
-                      </p>
-                    </div>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/dashboard" className="flex items-center gap-2">
-                        <LayoutDashboard className="w-4 h-4" />
-                        Dashboard
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/settings" className="flex items-center gap-2">
-                        <Settings className="w-4 h-4" />
-                        Einstellungen
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive">
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Abmelden
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
-            ) : (
+              {/* Clerk User Button */}
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "w-9 h-9",
+                    userButtonPopoverCard: "bg-zinc-900 border border-zinc-700",
+                    userButtonPopoverActionButton: "text-white hover:bg-zinc-800",
+                    userButtonPopoverActionButtonText: "text-white",
+                    userButtonPopoverFooter: "hidden",
+                  },
+                }}
+                afterSignOutUrl="/"
+              />
+            </SignedIn>
+
+            <SignedOut>
               <div className="flex items-center gap-2">
-                <Link href="/login">
+                <SignInButton mode="modal">
                   <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
                     Anmelden
                   </Button>
-                </Link>
-                <Link href="/register">
+                </SignInButton>
+                <SignUpButton mode="modal">
                   <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-glow-sm hover:shadow-glow transition-all">
                     Registrieren
                   </Button>
-                </Link>
+                </SignUpButton>
               </div>
-            )}
+            </SignedOut>
           </div>
 
           {/* Mobile Menu Button */}
@@ -280,43 +256,46 @@ export function Header() {
                   </div>
 
                   <div className="p-6 border-t border-border space-y-3">
-                    {isLoggedIn ? (
-                      <>
-                        <Link
-                          href="/dashboard"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                          <Button variant="outline" className="w-full">
-                            <LayoutDashboard className="w-4 h-4 mr-2" />
-                            Dashboard
-                          </Button>
-                        </Link>
-                        <Button variant="ghost" className="w-full text-destructive">
-                          <LogOut className="w-4 h-4 mr-2" />
-                          Abmelden
+                    <SignedIn>
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <Button variant="outline" className="w-full">
+                          <LayoutDashboard className="w-4 h-4 mr-2" />
+                          Dashboard
                         </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Link
-                          href="/login"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                          <Button variant="outline" className="w-full">
-                            <LogIn className="w-4 h-4 mr-2" />
-                            Anmelden
-                          </Button>
-                        </Link>
-                        <Link
-                          href="/register"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                          <Button className="w-full bg-primary text-primary-foreground">
-                            Registrieren
-                          </Button>
-                        </Link>
-                      </>
-                    )}
+                      </Link>
+                      <div className="flex items-center justify-center pt-2">
+                        <UserButton
+                          appearance={{
+                            elements: {
+                              avatarBox: "w-10 h-10",
+                              userButtonPopoverCard: "bg-zinc-900 border border-zinc-700",
+                              userButtonPopoverActionButton: "text-white hover:bg-zinc-800",
+                              userButtonPopoverActionButtonText: "text-white",
+                              userButtonPopoverFooter: "hidden",
+                            },
+                          }}
+                          afterSignOutUrl="/"
+                          showName
+                        />
+                      </div>
+                    </SignedIn>
+
+                    <SignedOut>
+                      <SignInButton mode="modal">
+                        <Button variant="outline" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                          <LogIn className="w-4 h-4 mr-2" />
+                          Anmelden
+                        </Button>
+                      </SignInButton>
+                      <SignUpButton mode="modal">
+                        <Button className="w-full bg-primary text-primary-foreground" onClick={() => setIsMobileMenuOpen(false)}>
+                          Registrieren
+                        </Button>
+                      </SignUpButton>
+                    </SignedOut>
                   </div>
                 </div>
               </SheetContent>

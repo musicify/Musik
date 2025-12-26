@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 // GET /api/invoices - Get all invoices for the current user
 export async function GET(request: Request) {
   try {
-    const session = await auth();
+    const user = await getCurrentUser();
 
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
 
-    const where = { userId: session.user.id };
+    const where = { userId: user.id };
 
     const [invoices, total] = await Promise.all([
       db.invoice.findMany({
@@ -62,9 +62,9 @@ export async function GET(request: Request) {
 // POST /api/invoices - Create an invoice for an order
 export async function POST(request: Request) {
   try {
-    const session = await auth();
+    const user = await getCurrentUser();
 
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
       data: {
         invoiceNumber,
         orderId,
-        userId: session.user.id,
+        userId: user.id,
         amount: subtotal,
         tax,
         total,

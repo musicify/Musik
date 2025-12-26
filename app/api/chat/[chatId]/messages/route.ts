@@ -1,29 +1,29 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 // GET /api/chat/[chatId]/messages - Get all messages in a chat
 export async function GET(
   request: Request,
-  { params }: { params: { chatId: string } }
+  { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
-    const session = await auth();
+    const user = await getCurrentUser();
 
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const { chatId } = params;
+    const { chatId } = await params;
 
     // Check if user is a participant
     const participant = await db.chatParticipant.findFirst({
       where: {
         chatId,
-        userId: session.user.id
+        userId: user.id
       }
     });
 
@@ -65,19 +65,19 @@ export async function GET(
 // POST /api/chat/[chatId]/messages - Send a message
 export async function POST(
   request: Request,
-  { params }: { params: { chatId: string } }
+  { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
-    const session = await auth();
+    const user = await getCurrentUser();
 
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const { chatId } = params;
+    const { chatId } = await params;
     const body = await request.json();
     const { content, fileUrl, fileType } = body;
 
@@ -92,7 +92,7 @@ export async function POST(
     const participant = await db.chatParticipant.findFirst({
       where: {
         chatId,
-        userId: session.user.id
+        userId: user.id
       }
     });
 
@@ -107,7 +107,7 @@ export async function POST(
     const message = await db.chatMessage.create({
       data: {
         chatId,
-        senderId: session.user.id,
+        senderId: user.id,
         content: content || "",
         fileUrl,
         fileType

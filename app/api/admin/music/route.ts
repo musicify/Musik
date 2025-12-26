@@ -1,18 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 // GET /api/admin/music - Get all music tracks (admin only)
 export async function GET(request: Request) {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const user = await requireAdmin();
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
@@ -80,14 +73,7 @@ export async function GET(request: Request) {
 // PATCH /api/admin/music - Update music status (approve/reject)
 export async function PATCH(request: Request) {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const user = await requireAdmin();
 
     const body = await request.json();
     const { musicId, status, rejectionReason } = body;
@@ -117,12 +103,12 @@ export async function PATCH(request: Request) {
       where: { musicId },
       create: {
         musicId,
-        reviewedBy: session.user.id,
+        reviewedBy: user.id,
         status: status === "ACTIVE" ? "APPROVED" : status === "INACTIVE" ? "REJECTED" : "PENDING",
         reviewNote: rejectionReason,
       },
       update: {
-        reviewedBy: session.user.id,
+        reviewedBy: user.id,
         status: status === "ACTIVE" ? "APPROVED" : status === "INACTIVE" ? "REJECTED" : "PENDING",
         reviewNote: rejectionReason,
       },

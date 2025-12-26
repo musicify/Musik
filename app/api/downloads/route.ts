@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 // GET /api/downloads - Get all downloads for the current user
 export async function GET() {
   try {
-    const session = await auth();
+    const user = await getCurrentUser();
 
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -16,7 +16,7 @@ export async function GET() {
 
     const downloads = await db.download.findMany({
       where: {
-        userId: session.user.id,
+        userId: user.id,
       },
       include: {
         music: {
@@ -62,9 +62,9 @@ export async function GET() {
 // POST /api/downloads - Create a download record and get download URL
 export async function POST(request: Request) {
   try {
-    const session = await auth();
+    const user = await getCurrentUser();
 
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
       const order = await db.order.findFirst({
         where: {
           id: orderId,
-          customerId: session.user.id,
+          customerId: user.id,
           status: "COMPLETED",
         },
       });
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
     // Create download record
     const download = await db.download.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         musicId,
         orderId,
         licenseType: licenseType || "PERSONAL",

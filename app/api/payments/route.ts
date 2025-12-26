@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 // POST /api/payments - Create a payment intent
 export async function POST(request: Request) {
   try {
-    const session = await auth();
+    const user = await getCurrentUser();
 
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const order = await db.order.findFirst({
       where: {
         id: orderId,
-        customerId: session.user.id
+        customerId: user.id
       }
     });
 
