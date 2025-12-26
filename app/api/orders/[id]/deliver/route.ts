@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireDirector, handleApiError, getDirectorProfile } from "@/lib/api/auth-helper";
+import { createNotification } from "@/lib/api/notifications";
 import { z } from "zod";
 
 const deliverSchema = z.object({
@@ -124,7 +125,17 @@ export async function POST(
       license_type: "COMMERCIAL",
     });
 
-    // TODO: E-Mail an Kunden senden
+    // Benachrichtigung an Customer senden
+    await createNotification({
+      userId: order.customer_id,
+      type: "completion",
+      title: "Musik ist fertig!",
+      message: `Die finale Musik für "${order.title || "deinen Auftrag"}" ist bereit zur Zahlung`,
+      link: `/orders/${id}`,
+      metadata: {
+        orderId: id,
+      },
+    });
 
     return NextResponse.json(updated);
   } catch (error) {

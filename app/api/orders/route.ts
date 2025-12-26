@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, handleApiError, getDirectorProfile } from "@/lib/api/auth-helper";
+import { createNotification } from "@/lib/api/notifications";
 import { z } from "zod";
 
 const createOrderSchema = z.object({
@@ -245,6 +246,19 @@ export async function POST(req: NextRequest) {
       });
 
       createdOrders.push(order);
+
+      // Benachrichtigung an Director senden
+      await createNotification({
+        userId: director.user_id,
+        type: "order",
+        title: "Neuer Auftrag erhalten",
+        message: `Du hast einen neuen Auftrag erhalten: ${validatedData.title}`,
+        link: `/director/orders`,
+        metadata: {
+          orderId: order.id,
+          orderNumber: orderNumber,
+        },
+      });
     }
 
     if (createdOrders.length === 0) {
@@ -253,8 +267,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    // TODO: E-Mail-Benachrichtigung an Directors senden
 
     return NextResponse.json(createdOrders, { status: 201 });
   } catch (error) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, handleApiError } from "@/lib/api/auth-helper";
+import { createNotification } from "@/lib/api/notifications";
 import { z } from "zod";
 
 const sendMessageSchema = z.object({
@@ -172,6 +173,38 @@ export async function POST(
       .update({ updated_at: new Date().toISOString() })
       .eq("id", chatId);
 
+    // Finde den anderen Teilnehmer für Benachrichtigung
+    const { data: participants } = await supabase
+      .from("chat_participants")
+      .select("user_id")
+      .eq("chat_id", chatId)
+      .neq("user_id", user.id);
+
+    // Sende Benachrichtigung an den anderen Teilnehmer
+    if (participants && participants.length > 0) {
+      const otherParticipantId = participants[0].user_id;
+      
+      // Hole Chat-Info für Link
+      const { data: chatData } = await supabase
+        .from("chats")
+        .select("order_id")
+        .eq("id", chatId)
+        .single();
+
+      await createNotification({
+        userId: otherParticipantId,
+        type: "message",
+        title: "Neue Nachricht",
+        message: `${user.name || "Jemand"} hat dir eine Nachricht gesendet`,
+        link: chatData?.order_id ? `/orders/${chatData.order_id}` : undefined,
+        metadata: {
+          chatId: chatId,
+          senderId: user.id,
+          senderName: user.name,
+        },
+      });
+    }
+
     // Transformiere
     const transformedMessage = {
       id: message.id,
@@ -188,9 +221,6 @@ export async function POST(
         image: (message.sender as any).image,
       } : null,
     };
-
-    // TODO: WebSocket/Pusher für Echtzeit-Updates
-    // TODO: Push-Benachrichtigung senden
 
     return NextResponse.json(transformedMessage, { status: 201 });
   } catch (error) {

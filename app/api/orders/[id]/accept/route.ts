@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, handleApiError } from "@/lib/api/auth-helper";
+import { createNotification } from "@/lib/api/notifications";
 
 // POST - Angebot annehmen (Customer)
 export async function POST(
@@ -20,7 +21,7 @@ export async function POST(
     // Prüfe ob Bestellung existiert und dem Customer gehört
     const { data: order, error: findError } = await supabase
       .from("orders")
-      .select("id, customer_id, status, offered_price, director_id")
+      .select("id, customer_id, status, offered_price, director_id, title")
       .eq("id", id)
       .single();
 
@@ -88,7 +89,28 @@ export async function POST(
       });
     }
 
-    // TODO: E-Mail an Director senden
+    // Benachrichtigung an Director senden
+    if (order.director_id) {
+      // Hole Director user_id
+      const { data: director } = await supabase
+        .from("director_profiles")
+        .select("user_id")
+        .eq("id", order.director_id)
+        .single();
+
+      if (director?.user_id) {
+        await createNotification({
+          userId: director.user_id,
+          type: "offer",
+          title: "Angebot angenommen",
+          message: `Dein Angebot für "${order.title || "Auftrag"}" wurde angenommen`,
+          link: `/director/orders`,
+          metadata: {
+            orderId: id,
+          },
+        });
+      }
+    }
 
     return NextResponse.json(updated);
   } catch (error) {

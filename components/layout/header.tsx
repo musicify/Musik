@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
+import { useNotifications } from "@/hooks/use-notifications";
 
 const navigation = [
   {
@@ -46,6 +47,7 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const cartItemCount = 0;
+  const { unreadCount } = useNotifications();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -143,14 +145,20 @@ export function Header() {
             {/* Auth */}
             <SignedIn>
               {/* Notifications */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative text-muted-foreground hover:text-foreground"
-              >
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
-              </Button>
+              <Link href="/dashboard">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative text-muted-foreground hover:text-foreground"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <Badge className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs bg-primary text-primary-foreground">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </Badge>
+                  )}
+                </Button>
+              </Link>
 
               {/* Dashboard Link */}
               <Link href="/dashboard">

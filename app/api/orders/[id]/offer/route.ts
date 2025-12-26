@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireDirector, handleApiError, getDirectorProfile } from "@/lib/api/auth-helper";
+import { createNotification } from "@/lib/api/notifications";
 import { z } from "zod";
 
 const offerSchema = z.object({
@@ -40,7 +41,7 @@ export async function POST(
     // Prüfe ob Bestellung existiert und dem Director zugewiesen ist
     const { data: order, error: findError } = await supabase
       .from("orders")
-      .select("id, director_id, status, customer_id")
+      .select("id, director_id, status, customer_id, title")
       .eq("id", id)
       .single();
 
@@ -121,7 +122,18 @@ export async function POST(
       }
     }
 
-    // TODO: E-Mail an Kunden senden
+    // Benachrichtigung an Customer senden
+    await createNotification({
+      userId: order.customer_id,
+      type: "offer",
+      title: "Neues Angebot erhalten",
+      message: `Du hast ein Angebot für "${order.title || "deinen Auftrag"}" erhalten`,
+      link: `/orders/${id}`,
+      metadata: {
+        orderId: id,
+        price: validatedData.price,
+      },
+    });
 
     return NextResponse.json(updated);
   } catch (error) {

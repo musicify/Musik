@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -31,8 +31,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useNotifications } from "@/hooks/use-notifications";
+import { useUser } from "@clerk/nextjs";
 
-// Mock user data
+// Mock user data (wird später durch echte Daten ersetzt)
 const user = {
   name: "Max Mustermann",
   email: "max@example.de",
@@ -96,30 +98,27 @@ const recentPurchases = [
   },
 ];
 
-// Mock notifications
-const notifications = [
-  {
-    id: "1",
-    type: "order",
-    message: "Max Müller hat einen neuen Entwurf hochgeladen",
-    time: "vor 2 Stunden",
-    unread: true,
-  },
-  {
-    id: "2",
-    type: "message",
-    message: "Neue Nachricht von Sarah Schmidt",
-    time: "vor 5 Stunden",
-    unread: true,
-  },
-  {
-    id: "3",
-    type: "system",
-    message: "Dein Download ist bereit",
-    time: "gestern",
-    unread: false,
-  },
-];
+// Helper function to format time
+function formatTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) {
+    return "gerade eben";
+  } else if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60);
+    return `vor ${minutes} ${minutes === 1 ? "Minute" : "Minuten"}`;
+  } else if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600);
+    return `vor ${hours} ${hours === 1 ? "Stunde" : "Stunden"}`;
+  } else if (diffInSeconds < 604800) {
+    const days = Math.floor(diffInSeconds / 86400);
+    return `vor ${days} ${days === 1 ? "Tag" : "Tagen"}`;
+  } else {
+    return date.toLocaleDateString("de-DE", { day: "numeric", month: "short" });
+  }
+}
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   PENDING: { label: "Wartet auf Angebot", color: "bg-yellow-500" },
@@ -162,6 +161,8 @@ function StatCard({
 
 export default function CustomerDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
+  const { notifications, unreadCount, loading: notificationsLoading, markAsRead } = useNotifications();
+  const { user: clerkUser } = useUser();
 
   return (
     <div className="min-h-screen pt-20 pb-16 bg-background">
@@ -188,9 +189,11 @@ export default function CustomerDashboard() {
             <Button variant="outline" size="sm">
               <Bell className="w-4 h-4 mr-2" />
               Benachrichtigungen
-              <Badge className="ml-2 bg-primary text-primary-foreground h-5 w-5 p-0 flex items-center justify-center">
-                2
-              </Badge>
+              {unreadCount > 0 && (
+                <Badge className="ml-2 bg-primary text-primary-foreground h-5 w-5 p-0 flex items-center justify-center">
+                  {unreadCount}
+                </Badge>
+              )}
             </Button>
             <Link href="/settings">
               <Button variant="outline" size="sm">
@@ -319,30 +322,49 @@ export default function CustomerDashboard() {
                   <CardContent>
                     <ScrollArea className="h-[200px]">
                       <div className="space-y-3">
-                        {notifications.map((notification) => (
-                          <div
-                            key={notification.id}
-                            className={`flex items-start gap-3 p-3 rounded-lg ${
-                              notification.unread
-                                ? "bg-primary/5"
-                                : "bg-transparent"
-                            }`}
-                          >
-                            <div
-                              className={`w-2 h-2 rounded-full mt-2 ${
-                                notification.unread
-                                  ? "bg-primary"
-                                  : "bg-muted-foreground/30"
-                              }`}
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm">{notification.message}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {notification.time}
-                              </p>
-                            </div>
+                        {notificationsLoading ? (
+                          <div className="text-center py-4 text-sm text-muted-foreground">
+                            Lade Benachrichtigungen...
                           </div>
-                        ))}
+                        ) : notifications.length === 0 ? (
+                          <div className="text-center py-4 text-sm text-muted-foreground">
+                            Keine Benachrichtigungen
+                          </div>
+                        ) : (
+                          notifications.slice(0, 5).map((notification) => (
+                            <Link
+                              key={notification.id}
+                              href={notification.link || "#"}
+                              onClick={() => {
+                                if (!notification.is_read) {
+                                  markAsRead(notification.id);
+                                }
+                              }}
+                              className={`flex items-start gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors ${
+                                !notification.is_read
+                                  ? "bg-primary/5"
+                                  : "bg-transparent"
+                              }`}
+                            >
+                              <div
+                                className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                                  !notification.is_read
+                                    ? "bg-primary"
+                                    : "bg-muted-foreground/30"
+                                }`}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium">{notification.title}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {notification.message}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {formatTime(notification.created_at)}
+                                </p>
+                              </div>
+                            </Link>
+                          ))
+                        )}
                       </div>
                     </ScrollArea>
                   </CardContent>
