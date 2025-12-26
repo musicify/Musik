@@ -41,6 +41,7 @@ import {
   defaultFilters,
   type MusicFilterValues,
 } from "@/components/filters/music-filter-panel";
+import { useCart } from "@/hooks/use-cart";
 
 // Mock data for tracks
 const mockTracks = [
@@ -211,11 +212,13 @@ function TrackCard({
   track,
   isPlaying,
   onPlayToggle,
+  onAddToCart,
   viewMode,
 }: {
   track: (typeof mockTracks)[0];
   isPlaying: boolean;
   onPlayToggle: () => void;
+  onAddToCart: () => void;
   viewMode: "grid" | "list";
 }) {
   const [isLiked, setIsLiked] = useState(false);
@@ -325,7 +328,7 @@ function TrackCard({
                   <TooltipContent>Merken</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <Button size="sm" className="h-8">
+              <Button size="sm" className="h-8" onClick={onAddToCart}>
                 <ShoppingCart className="w-3.5 h-3.5 mr-1" />
                 Kaufen
               </Button>
@@ -434,7 +437,7 @@ function TrackCard({
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-primary">€{track.price}</span>
-                <Button size="sm" variant="secondary" className="h-8">
+                <Button size="sm" variant="secondary" className="h-8" onClick={onAddToCart}>
                   <ShoppingCart className="w-3.5 h-3.5" />
                 </Button>
               </div>
@@ -452,6 +455,11 @@ export default function MarketplacePage() {
   const [sortBy, setSortBy] = useState("popular");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
+  const { addToCart } = useCart();
+
+  const handleAddToCart = useCallback((trackId: string) => {
+    addToCart(trackId, "COMMERCIAL");
+  }, [addToCart]);
 
   const resetFilters = useCallback(() => {
     setFilters(defaultFilters);
@@ -652,6 +660,7 @@ export default function MarketplacePage() {
                           playingTrackId === track.id ? null : track.id
                         )
                       }
+                      onAddToCart={() => handleAddToCart(track.id)}
                       viewMode="grid"
                     />
                   ))}
@@ -670,6 +679,7 @@ export default function MarketplacePage() {
                           playingTrackId === track.id ? null : track.id
                         )
                       }
+                      onAddToCart={() => handleAddToCart(track.id)}
                       viewMode="list"
                     />
                   ))}

@@ -7,6 +7,7 @@ import { Footer } from "@/components/layout/footer";
 import { Toaster } from "@/components/ui/sonner";
 import { AudioPlayerProvider } from "@/lib/hooks/use-audio-player";
 import { GlobalAudioPlayer } from "@/components/music/global-audio-player";
+import { CartProvider } from "@/hooks/use-cart";
 
 export const metadata: Metadata = {
   title: "Musicify - Musik-Marktplatz & Custom Music Platform",
@@ -46,13 +47,15 @@ export default function RootLayout({
           <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         </head>
         <body className="min-h-screen flex flex-col">
-          <AudioPlayerProvider>
-            <Header />
-            <main className="flex-1 pb-20">{children}</main>
-            <Footer />
-            <GlobalAudioPlayer />
-            <Toaster />
-          </AudioPlayerProvider>
+          <CartProvider>
+            <AudioPlayerProvider>
+              <Header />
+              <main className="flex-1 pb-20">{children}</main>
+              <Footer />
+              <GlobalAudioPlayer />
+              <Toaster />
+            </AudioPlayerProvider>
+          </CartProvider>
         </body>
       </html>
     </ClerkProvider>

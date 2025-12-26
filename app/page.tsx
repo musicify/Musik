@@ -23,7 +23,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useCart } from "@/hooks/use-cart";
 
 // Animation variants
 const fadeUp = {
@@ -159,6 +160,11 @@ const stats = [
 export default function HomePage() {
   const router = useRouter();
   const [playingTrack, setPlayingTrack] = useState<string | null>(null);
+  const { addToCart } = useCart();
+
+  const handleAddToCart = useCallback((trackId: string) => {
+    addToCart(trackId, "COMMERCIAL");
+  }, [addToCart]);
 
   return (
     <div className="relative">
@@ -421,7 +427,7 @@ export default function HomePage() {
                           <span className="font-semibold text-primary">
                             €{track.price}
                           </span>
-                          <Button size="sm" variant="secondary">
+                          <Button size="sm" variant="secondary" onClick={() => handleAddToCart(track.id)}>
                             <ShoppingCart className="w-3.5 h-3.5" />
                           </Button>
                         </div>
