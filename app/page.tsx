@@ -225,25 +225,20 @@ export default function HomePage() {
               variants={fadeUp}
               className="flex flex-col sm:flex-row items-center justify-center gap-4"
             >
-              <Link href="/marketplace">
-                <Button
-                  size="lg"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 h-14 shadow-glow hover:shadow-glow-lg transition-all"
-                >
-                  <Headphones className="w-5 h-5 mr-2" />
-                  Musik entdecken
-                </Button>
+              <Link
+                href="/marketplace"
+                className="inline-flex items-center justify-center bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 h-14 rounded-md shadow-glow hover:shadow-glow-lg transition-all font-medium"
+              >
+                <Headphones className="w-5 h-5 mr-2" />
+                Musik entdecken
               </Link>
-              <Link href="/custom-music">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-lg px-8 h-14 border-border hover:bg-secondary"
-                >
-                  <Mic2 className="w-5 h-5 mr-2" />
-                  Musik auf Bestellung
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
+              <Link
+                href="/custom-music"
+                className="inline-flex items-center justify-center text-lg px-8 h-14 rounded-md border border-border hover:bg-secondary transition-all font-medium"
+              >
+                <Mic2 className="w-5 h-5 mr-2" />
+                Musik auf Bestellung
+                <ArrowRight className="w-5 h-5 ml-2" />
               </Link>
             </motion.div>
 
