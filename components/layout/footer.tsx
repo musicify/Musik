@@ -22,7 +22,6 @@ const footerLinks = {
       { name: "Über uns", href: "/about" },
       { name: "Blog", href: "/blog" },
       { name: "Karriere", href: "/careers" },
-      { name: "Presse", href: "/press" },
     ],
   },
   support: {

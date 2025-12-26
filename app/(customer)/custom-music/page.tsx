@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -156,22 +156,46 @@ export default function CustomMusicPage() {
     license: "commercial",
   });
 
-  const progress = (currentStep / steps.length) * 100;
+  const progress = useMemo(() => (currentStep / steps.length) * 100, [currentStep]);
 
-  const updateFormData = (key: string, value: unknown) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
-  };
+  const updateFormData = useCallback((key: string, value: unknown) => {
+    setFormData((prev) => {
+      // Only update if value actually changed
+      if (prev[key as keyof typeof prev] === value) {
+        return prev;
+      }
+      return { ...prev, [key]: value };
+    });
+  }, []);
 
-  const toggleArrayValue = (key: string, value: string) => {
+  const toggleArrayValue = useCallback((key: string, value: string) => {
     setFormData((prev) => {
       const arr = prev[key as keyof typeof prev] as string[];
       if (arr.includes(value)) {
-        return { ...prev, [key]: arr.filter((v) => v !== value) };
+        const newArr = arr.filter((v) => v !== value);
+        // Only update if array actually changed
+        if (newArr.length === arr.length) return prev;
+        return { ...prev, [key]: newArr };
       } else {
         return { ...prev, [key]: [...arr, value] };
       }
     });
-  };
+  }, []);
+
+  // Memoized handlers for sliders to prevent excessive re-renders
+  const handleDurationChange = useCallback((value: number[]) => {
+    setFormData((prev) => {
+      if (prev.duration[0] === value[0]) return prev;
+      return { ...prev, duration: value };
+    });
+  }, []);
+
+  const handleBudgetChange = useCallback((value: number[]) => {
+    setFormData((prev) => {
+      if (prev.budget[0] === value[0]) return prev;
+      return { ...prev, budget: value };
+    });
+  }, []);
 
   const canProceed = () => {
     switch (currentStep) {
@@ -386,7 +410,8 @@ export default function CustomMusicPage() {
                           updateFormData("description", e.target.value)
                       }
                         rows={5}
-                        className="bg-background"
+                        className="bg-background resize-none"
+                        style={{ resize: 'none' }}
                     />
                       <p className="text-xs text-muted-foreground mt-1">
                         Je detaillierter, desto besser können unsere Komponisten
@@ -406,7 +431,8 @@ export default function CustomMusicPage() {
                           updateFormData("references", e.target.value)
                         }
                         rows={3}
-                        className="bg-background"
+                        className="bg-background resize-none"
+                        style={{ resize: 'none' }}
                       />
                     </div>
 
@@ -418,9 +444,7 @@ export default function CustomMusicPage() {
                         </Label>
                     <Slider
                           value={formData.duration}
-                          onValueChange={(value) =>
-                            updateFormData("duration", value)
-                          }
+                          onValueChange={handleDurationChange}
                       min={30}
                       max={600}
                       step={30}
@@ -438,7 +462,7 @@ export default function CustomMusicPage() {
                         </Label>
                         <Slider
                           value={formData.budget}
-                          onValueChange={(value) => updateFormData("budget", value)}
+                          onValueChange={handleBudgetChange}
                           min={100}
                           max={5000}
                           step={50}

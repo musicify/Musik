@@ -491,6 +491,30 @@ export default function MarketplacePage() {
       result = result.filter((track) => filters.moods.includes(track.mood));
     }
 
+    // Apply use case filter (if tracks had useCase field, would filter here)
+    // Note: Mock tracks don't have useCase, but filter is ready for real data
+    // if (filters.useCases.length > 0) {
+    //   result = result.filter((track) => 
+    //     track.useCase && filters.useCases.includes(track.useCase)
+    //   );
+    // }
+
+    // Apply era filter (if tracks had era field, would filter here)
+    // Note: Mock tracks don't have era, but filter is ready for real data
+    // if (filters.eras.length > 0) {
+    //   result = result.filter((track) => 
+    //     track.era && filters.eras.includes(track.era)
+    //   );
+    // }
+
+    // Apply license type filter (if tracks had licenseType field, would filter here)
+    // Note: Mock tracks don't have licenseType, but filter is ready for real data
+    // if (filters.licenseTypes.length > 0) {
+    //   result = result.filter((track) => 
+    //     track.licenseType && filters.licenseTypes.includes(track.licenseType)
+    //   );
+    // }
+
     // Apply price filter
     result = result.filter(
       (track) =>
