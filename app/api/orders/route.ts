@@ -94,45 +94,52 @@ export async function GET(req: NextRequest) {
     }
 
     // Transformiere Daten für Frontend
-    const transformedOrders = (orders || []).map((order: any) => ({
-      id: order.id,
-      orderNumber: order.order_number,
-      customerId: order.customer_id,
-      directorId: order.director_id,
-      status: order.status,
-      title: order.title,
-      description: order.description,
-      requirements: order.requirements,
-      references: order.references,
-      notes: order.notes,
-      budget: order.budget,
-      genre: order.genre,
-      subgenre: order.subgenre,
-      style: order.style,
-      era: order.era,
-      culture: order.culture,
-      mood: order.mood,
-      useCase: order.use_case,
-      structure: order.structure,
-      offeredPrice: order.offered_price,
-      productionTime: order.production_time,
-      offerAcceptedAt: order.offer_accepted_at,
-      includedRevisions: order.included_revisions,
-      usedRevisions: order.used_revisions,
-      finalMusicUrl: order.final_music_url,
-      createdAt: order.created_at,
-      updatedAt: order.updated_at,
-      customer: order.customer,
-      director: order.director ? {
-        id: order.director.id,
-        badges: order.director.badges || [],
-        user: order.director.user,
-      } : null,
-      chat: order.chat ? {
-        id: order.chat.id,
-        messages: order.chat.messages?.slice(0, 1) || [],
-      } : null,
-    }));
+    const transformedOrders = (orders || []).map((order: any) => {
+      // Supabase gibt Relations als Array zurück, auch bei one-to-one Beziehungen
+      const customerData = Array.isArray(order.customer) ? order.customer[0] : order.customer;
+      const directorData = Array.isArray(order.director) ? order.director[0] : order.director;
+      const chatData = Array.isArray(order.chat) ? order.chat[0] : order.chat;
+      
+      return {
+        id: order.id,
+        orderNumber: order.order_number,
+        customerId: order.customer_id,
+        directorId: order.director_id,
+        status: order.status,
+        title: order.title,
+        description: order.description,
+        requirements: order.requirements,
+        references: order.references,
+        notes: order.notes,
+        budget: order.budget,
+        genre: order.genre,
+        subgenre: order.subgenre,
+        style: order.style,
+        era: order.era,
+        culture: order.culture,
+        mood: order.mood,
+        useCase: order.use_case,
+        structure: order.structure,
+        offeredPrice: order.offered_price,
+        productionTime: order.production_time,
+        offerAcceptedAt: order.offer_accepted_at,
+        includedRevisions: order.included_revisions,
+        usedRevisions: order.used_revisions,
+        finalMusicUrl: order.final_music_url,
+        createdAt: order.created_at,
+        updatedAt: order.updated_at,
+        customer: customerData,
+        director: directorData ? {
+          id: directorData.id,
+          badges: directorData.badges || [],
+          user: directorData.user,
+        } : null,
+        chat: chatData ? {
+          id: chatData.id,
+          messages: chatData.messages?.slice(0, 1) || [],
+        } : null,
+      };
+    });
 
     return NextResponse.json(transformedOrders);
   } catch (error) {

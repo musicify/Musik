@@ -81,57 +81,62 @@ export async function GET(req: NextRequest) {
     const itemsWithPrices = (cartItems || []).map((item: any) => {
       let calculatedPrice = 0;
 
-      if (item.music) {
+      // Supabase gibt order als Array zurück, auch bei one-to-one Beziehungen
+      const orderData = Array.isArray(item.order) ? item.order[0] : item.order;
+      // Supabase gibt music als Array zurück, auch bei one-to-one Beziehungen
+      const musicData = Array.isArray(item.music) ? item.music[0] : item.music;
+
+      if (musicData) {
         const licenseType = item.license_type as keyof typeof LICENSE_MULTIPLIERS;
         
         // Prüfe ob spezifischer Lizenzpreis existiert
         switch (licenseType) {
           case "PERSONAL":
-            calculatedPrice = item.music.price_personal || item.music.price * LICENSE_MULTIPLIERS.PERSONAL;
+            calculatedPrice = musicData.price_personal || musicData.price * LICENSE_MULTIPLIERS.PERSONAL;
             break;
           case "COMMERCIAL":
-            calculatedPrice = item.music.price_commercial || item.music.price * LICENSE_MULTIPLIERS.COMMERCIAL;
+            calculatedPrice = musicData.price_commercial || musicData.price * LICENSE_MULTIPLIERS.COMMERCIAL;
             break;
           case "ENTERPRISE":
-            calculatedPrice = item.music.price_enterprise || item.music.price * LICENSE_MULTIPLIERS.ENTERPRISE;
+            calculatedPrice = musicData.price_enterprise || musicData.price * LICENSE_MULTIPLIERS.ENTERPRISE;
             break;
           case "EXCLUSIVE":
-            calculatedPrice = item.music.price_exclusive || item.music.price * LICENSE_MULTIPLIERS.EXCLUSIVE;
+            calculatedPrice = musicData.price_exclusive || musicData.price * LICENSE_MULTIPLIERS.EXCLUSIVE;
             break;
         }
-      } else if (item.order) {
-        calculatedPrice = item.order.offered_price || 0;
+      } else if (orderData) {
+        calculatedPrice = orderData.offered_price || 0;
       }
 
       return {
         id: item.id,
-        musicId: item.music?.id,
-        orderId: item.order?.id,
+        musicId: musicData?.id,
+        orderId: orderData?.id,
         licenseType: item.license_type,
         calculatedPrice: Math.round(calculatedPrice * 100) / 100,
-        music: item.music ? {
-          id: item.music.id,
-          title: item.music.title,
-          description: item.music.description,
-          duration: item.music.duration,
-          price: item.music.price,
-          audioUrl: item.music.audio_url,
-          previewUrl: item.music.preview_url,
-          coverImage: item.music.cover_image,
-          genre: item.music.genre,
-          mood: item.music.mood,
-          director: item.music.director ? {
-            id: item.music.director.id,
-            badges: item.music.director.badges || [],
-            user: item.music.director.user,
+        music: musicData ? {
+          id: musicData.id,
+          title: musicData.title,
+          description: musicData.description,
+          duration: musicData.duration,
+          price: musicData.price,
+          audioUrl: musicData.audio_url,
+          previewUrl: musicData.preview_url,
+          coverImage: musicData.cover_image,
+          genre: musicData.genre,
+          mood: musicData.mood,
+          director: musicData.director ? {
+            id: musicData.director.id,
+            badges: musicData.director.badges || [],
+            user: musicData.director.user,
           } : null,
         } : null,
-        order: item.order ? {
-          id: item.order.id,
-          orderNumber: item.order.order_number,
-          title: item.order.title,
-          offeredPrice: item.order.offered_price,
-          status: item.order.status,
+        order: orderData ? {
+          id: orderData.id,
+          orderNumber: orderData.order_number,
+          title: orderData.title,
+          offeredPrice: orderData.offered_price,
+          status: orderData.status,
         } : null,
         createdAt: item.created_at,
       };

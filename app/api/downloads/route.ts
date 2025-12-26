@@ -55,29 +55,35 @@ export async function GET(req: NextRequest) {
     }
 
     // Transformiere Daten
-    const transformedDownloads = (downloads || []).map((download: any) => ({
-      id: download.id,
-      licenseType: download.license_type,
-      downloadUrl: download.download_url,
-      downloadCount: download.download_count,
-      expiresAt: download.expires_at,
-      createdAt: download.created_at,
-      music: download.music ? {
-        id: download.music.id,
-        title: download.music.title,
-        duration: download.music.duration,
-        audioUrl: download.music.audio_url,
-        coverImage: download.music.cover_image,
-        genre: download.music.genre,
-        artist: download.music.director?.user?.name || "Unbekannt",
-      } : null,
-      order: download.order ? {
-        id: download.order.id,
-        orderNumber: download.order.order_number,
-        title: download.order.title,
-        musicUrl: download.order.final_music_url,
-      } : null,
-    }));
+    const transformedDownloads = (downloads || []).map((download: any) => {
+      // Supabase gibt order und music als Array zurück, auch bei one-to-one Beziehungen
+      const orderData = Array.isArray(download.order) ? download.order[0] : download.order;
+      const musicData = Array.isArray(download.music) ? download.music[0] : download.music;
+      
+      return {
+        id: download.id,
+        licenseType: download.license_type,
+        downloadUrl: download.download_url,
+        downloadCount: download.download_count,
+        expiresAt: download.expires_at,
+        createdAt: download.created_at,
+        music: musicData ? {
+          id: musicData.id,
+          title: musicData.title,
+          duration: musicData.duration,
+          audioUrl: musicData.audio_url,
+          coverImage: musicData.cover_image,
+          genre: musicData.genre,
+          artist: musicData.director?.user?.name || "Unbekannt",
+        } : null,
+        order: orderData ? {
+          id: orderData.id,
+          orderNumber: orderData.order_number,
+          title: orderData.title,
+          musicUrl: orderData.final_music_url,
+        } : null,
+      };
+    });
 
     return NextResponse.json(transformedDownloads);
   } catch (error) {

@@ -77,6 +77,11 @@ export async function GET(
     }
 
     // Transformiere Daten
+    // Supabase gibt Relations als Array zurück, auch bei one-to-one Beziehungen
+    const customerData = Array.isArray(order.customer) ? order.customer[0] : order.customer;
+    const directorData = Array.isArray(order.director) ? order.director[0] : order.director;
+    const chatData = Array.isArray(order.chat) ? order.chat[0] : order.chat;
+    
     const transformedOrder = {
       id: order.id,
       orderNumber: order.order_number,
@@ -108,19 +113,19 @@ export async function GET(
       finalMusicId: order.final_music_id,
       createdAt: order.created_at,
       updatedAt: order.updated_at,
-      customer: order.customer,
-      director: order.director ? {
-        id: order.director.id,
-        bio: order.director.bio,
-        badges: order.director.badges || [],
-        priceRangeMin: order.director.price_range_min,
-        priceRangeMax: order.director.price_range_max,
-        avgResponseTime: order.director.avg_response_time,
-        completionRate: order.director.completion_rate,
-        rating: order.director.rating,
-        user: order.director.user,
+      customer: customerData,
+      director: directorData ? {
+        id: directorData.id,
+        bio: directorData.bio,
+        badges: directorData.badges || [],
+        priceRangeMin: directorData.price_range_min,
+        priceRangeMax: directorData.price_range_max,
+        avgResponseTime: directorData.avg_response_time,
+        completionRate: directorData.completion_rate,
+        rating: directorData.rating,
+        user: directorData.user,
       } : null,
-      chatId: order.chat?.id,
+      chatId: chatData?.id,
       history: order.history?.map((h: any) => ({
         id: h.id,
         status: h.status,

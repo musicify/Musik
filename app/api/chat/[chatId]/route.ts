@@ -68,15 +68,18 @@ export async function GET(
     }
 
     // Transformiere Daten
+    // Supabase gibt order als Array zurück, auch bei one-to-one Beziehungen
+    const orderData = Array.isArray(chat.order) ? chat.order[0] : chat.order;
+    
     const transformedChat = {
       id: chat.id,
       orderId: chat.order_id,
       createdAt: chat.created_at,
-      order: chat.order ? {
-        id: chat.order.id,
-        orderNumber: chat.order.order_number,
-        title: chat.order.title,
-        status: chat.order.status,
+      order: orderData ? {
+        id: orderData.id,
+        orderNumber: orderData.order_number,
+        title: orderData.title,
+        status: orderData.status,
       } : null,
       participants: (chat.participants || []).map((p: any) => ({
         userId: p.user_id,
