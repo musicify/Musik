@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Play,
@@ -156,29 +157,29 @@ const stats = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
   const [playingTrack, setPlayingTrack] = useState<string | null>(null);
 
   return (
     <div className="relative">
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0 hero-gradient" />
-        <div className="absolute inset-0 pattern-dots opacity-30" />
+        {/* Background - pointer-events-none to allow clicks through */}
+        <div className="absolute inset-0 hero-gradient pointer-events-none" />
+        <div className="absolute inset-0 pattern-dots opacity-30 pointer-events-none" />
         
-        {/* Animated circles */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse-slow" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/5 rounded-full blur-3xl animate-pulse-slow animation-delay-500" />
+        {/* Animated circles - pointer-events-none to allow clicks through */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse-slow pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/5 rounded-full blur-3xl animate-pulse-slow animation-delay-500 pointer-events-none" />
 
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-20">
-          <motion.div
-            initial="initial"
-            animate="animate"
-            variants={stagger}
-            className="text-center max-w-4xl mx-auto"
-          >
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-20 relative z-20">
+          <div className="text-center max-w-4xl mx-auto">
             {/* Badge */}
-            <motion.div variants={fadeUp}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
               <Badge
                 variant="secondary"
                 className="mb-6 px-4 py-1.5 text-sm font-medium border border-border/50"
@@ -190,7 +191,9 @@ export default function HomePage() {
 
             {/* Headline */}
             <motion.h1
-              variants={fadeUp}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
               className="font-serif text-5xl sm:text-6xl lg:text-7xl tracking-tight mb-6"
             >
               Musik, die{" "}
@@ -213,7 +216,9 @@ export default function HomePage() {
 
             {/* Subheadline */}
             <motion.p
-              variants={fadeUp}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
               className="text-xl sm:text-2xl text-muted-foreground mb-10 max-w-2xl mx-auto"
             >
               Entdecke lizenzierte Musik oder lass dir individuelle Soundtracks
@@ -222,29 +227,36 @@ export default function HomePage() {
 
             {/* CTAs */}
             <motion.div
-              variants={fadeUp}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-4"
             >
-              <Link
-                href="/marketplace"
-                className="inline-flex items-center justify-center bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 h-14 rounded-md shadow-glow hover:shadow-glow-lg transition-all font-medium"
+              <Button
+                size="lg"
+                onClick={() => router.push("/marketplace")}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 h-14 shadow-glow hover:shadow-glow-lg transition-all"
               >
                 <Headphones className="w-5 h-5 mr-2" />
                 Musik entdecken
-              </Link>
-              <Link
-                href="/custom-music"
-                className="inline-flex items-center justify-center text-lg px-8 h-14 rounded-md border border-border hover:bg-secondary transition-all font-medium"
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => router.push("/custom-music")}
+                className="text-lg px-8 h-14 border-border hover:bg-secondary transition-all"
               >
                 <Mic2 className="w-5 h-5 mr-2" />
                 Musik auf Bestellung
                 <ArrowRight className="w-5 h-5 ml-2" />
-              </Link>
+              </Button>
             </motion.div>
 
             {/* Stats */}
             <motion.div
-              variants={fadeUp}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
               className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-8"
             >
               {stats.map((stat, index) => (
@@ -258,11 +270,11 @@ export default function HomePage() {
                 </div>
               ))}
             </motion.div>
-          </motion.div>
+          </div>
         </div>
 
         {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce pointer-events-none">
           <div className="w-6 h-10 rounded-full border-2 border-muted-foreground/30 flex items-start justify-center p-2">
             <div className="w-1 h-2 bg-muted-foreground/50 rounded-full animate-pulse" />
           </div>
@@ -810,24 +822,22 @@ export default function HomePage() {
               transition={{ delay: 0.2 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-4"
             >
-              <Link href="/register">
-                <Button
-                  size="lg"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 h-14 shadow-glow hover:shadow-glow-lg transition-all"
-                >
-                  Kostenlos registrieren
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              </Link>
-              <Link href="/marketplace">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-lg px-8 h-14 border-border hover:bg-secondary"
-                >
-                  Katalog durchstöbern
-                </Button>
-              </Link>
+              <Button
+                size="lg"
+                onClick={() => router.push("/register")}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 h-14 shadow-glow hover:shadow-glow-lg transition-all"
+              >
+                Kostenlos registrieren
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => router.push("/marketplace")}
+                className="text-lg px-8 h-14 border-border hover:bg-secondary"
+              >
+                Katalog durchstöbern
+              </Button>
             </motion.div>
           </div>
         </div>
