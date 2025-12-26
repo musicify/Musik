@@ -4,20 +4,21 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Mail,
-  MessageSquare,
   Phone,
   MapPin,
+  MessageSquare,
   Send,
   Clock,
   HelpCircle,
-  Building,
+  FileText,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -25,88 +26,151 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
-const contactMethods = [
+const contactInfo = [
   {
     icon: Mail,
-    title: "E-Mail",
-    value: "support@musicify.de",
-    description: "Antwort innerhalb von 24h",
+    label: "E-Mail",
+    value: "hello@musicify.de",
+    href: "mailto:hello@musicify.de",
   },
   {
     icon: Phone,
-    title: "Telefon",
-    value: "+49 30 12345678",
-    description: "Mo-Fr 9-18 Uhr",
+    label: "Telefon",
+    value: "+49 30 123 456 789",
+    href: "tel:+4930123456789",
   },
   {
-    icon: MessageSquare,
-    title: "Live Chat",
-    value: "Im Dashboard",
-    description: "Schnelle Hilfe in Echtzeit",
+    icon: MapPin,
+    label: "Adresse",
+    value: "Musterstraße 123, 10115 Berlin",
+    href: null,
+  },
+  {
+    icon: Clock,
+    label: "Support-Zeiten",
+    value: "Mo-Fr, 9:00-18:00 Uhr",
+    href: null,
+  },
+];
+
+const topics = [
+  { value: "general", label: "Allgemeine Anfrage" },
+  { value: "licensing", label: "Lizenzierung" },
+  { value: "technical", label: "Technischer Support" },
+  { value: "director", label: "Komponist werden" },
+  { value: "billing", label: "Abrechnung & Zahlung" },
+  { value: "other", label: "Sonstiges" },
+];
+
+const faqs = [
+  {
+    question: "Wie funktioniert die Lizenzierung?",
+    answer:
+      "Wir bieten verschiedene Lizenztypen an: Personal für private Nutzung, Commercial für kommerzielle Projekte mit begrenzter Reichweite, Enterprise für unbegrenzte kommerzielle Nutzung und Exclusive für den vollständigen Rechtekauf. Jede Lizenz hat klare Nutzungsbedingungen, die du beim Kauf einsehen kannst.",
+  },
+  {
+    question: "Kann ich einen Track vor dem Kauf anhören?",
+    answer:
+      "Ja! Alle Tracks in unserem Katalog haben eine vollständige Vorschau mit Wasserzeichen. So kannst du sicherstellen, dass der Track zu deinem Projekt passt, bevor du ihn kaufst.",
+  },
+  {
+    question: "Wie funktioniert Custom Music?",
+    answer:
+      "Bei Custom Music beschreibst du dein Projekt und wählst einen oder mehrere Komponisten aus. Diese erhalten deine Anfrage und können dir ein Angebot unterbreiten. Nach Annahme des Angebots beginnt die Produktion, inklusive Revisionen bis zur finalen Abnahme.",
+  },
+  {
+    question: "Wie werde ich Komponist auf der Plattform?",
+    answer:
+      "Um Komponist zu werden, registriere dich und reiche dein Portfolio mit mindestens 3-5 Sample-Tracks ein. Unser Team prüft deine Bewerbung innerhalb von 48 Stunden. Nach erfolgreicher Verifizierung kannst du Tracks hochladen und Aufträge annehmen.",
+  },
+  {
+    question: "Welche Zahlungsmethoden werden akzeptiert?",
+    answer:
+      "Wir akzeptieren Kreditkarten (Visa, Mastercard, American Express), PayPal und Klarna. Alle Zahlungen werden sicher über verschlüsselte Verbindungen abgewickelt.",
+  },
+  {
+    question: "Kann ich eine Rechnung erhalten?",
+    answer:
+      "Ja, nach jedem Kauf erhältst du automatisch eine Rechnung per E-Mail. Alle Rechnungen findest du auch in deinem Dashboard unter 'Rechnungen'.",
   },
 ];
 
 export default function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     await new Promise((resolve) => setTimeout(resolve, 1500));
     setIsSubmitting(false);
-    setSubmitted(true);
+    setIsSubmitted(true);
   };
 
   return (
-    <div className="min-h-screen pt-20 pb-16">
-      {/* Hero */}
-      <section className="relative py-16 lg:py-20 overflow-hidden">
+    <div className="min-h-screen pt-20">
+      {/* Hero Section */}
+      <section className="relative py-16 overflow-hidden">
         <div className="absolute inset-0 hero-gradient opacity-50" />
         <div className="absolute inset-0 pattern-dots opacity-20" />
+
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center max-w-3xl mx-auto"
           >
-            <Badge variant="secondary" className="mb-4">
-              <HelpCircle className="w-3 h-3 mr-1" />
-              Hilfe & Support
+            <Badge variant="secondary" className="mb-6">
+              <MessageSquare className="w-3 h-3 mr-1" />
+              Kontakt
             </Badge>
             <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl mb-6">
-              Wir sind für dich da
+              Wie können wir <span className="gradient-text">helfen</span>?
             </h1>
             <p className="text-lg text-muted-foreground">
-              Hast du Fragen oder brauchst Unterstützung? Unser Team hilft dir
-              gerne weiter.
+              Hast du Fragen zu unserer Plattform, Lizenzierung oder einem
+              laufenden Projekt? Wir sind für dich da.
             </p>
           </motion.div>
         </div>
       </section>
 
-      {/* Contact Methods */}
-      <section className="py-12 border-b border-border/50">
+      {/* Contact Info Cards */}
+      <section className="py-12 bg-card">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-6">
-            {contactMethods.map((method, index) => (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {contactInfo.map((info, index) => (
               <motion.div
-                key={method.title}
+                key={index}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
               >
-                <Card className="bg-card border-border/50 h-full text-center card-hover">
-                  <CardContent className="p-6">
-                    <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                      <method.icon className="w-7 h-7 text-primary" />
+                <Card className="bg-background/50 border-border/50 h-full">
+                  <CardContent className="p-6 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <info.icon className="w-6 h-6 text-primary" />
                     </div>
-                    <h3 className="font-semibold text-lg mb-1">{method.title}</h3>
-                    <p className="text-primary font-medium mb-1">{method.value}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {method.description}
-                    </p>
+                    <div>
+                      <p className="text-sm text-muted-foreground">{info.label}</p>
+                      {info.href ? (
+                        <a
+                          href={info.href}
+                          className="font-medium hover:text-primary transition-colors"
+                        >
+                          {info.value}
+                        </a>
+                      ) : (
+                        <p className="font-medium">{info.value}</p>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -115,95 +179,100 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* Contact Form */}
+      {/* Contact Form & FAQ */}
       <section className="py-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12">
-            {/* Form */}
+            {/* Contact Form */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
             >
-              <Card className="bg-card border-border/50">
+              <Card className="bg-card/50 border-border/50">
                 <CardHeader>
-                  <CardTitle>Kontaktformular</CardTitle>
-                  <CardDescription>
-                    Fülle das Formular aus und wir melden uns schnellstmöglich.
-                  </CardDescription>
+                  <CardTitle className="font-serif text-2xl">
+                    Nachricht senden
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {submitted ? (
+                  {isSubmitted ? (
                     <div className="text-center py-8">
-                      <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
                         <Send className="w-8 h-8 text-green-500" />
                       </div>
-                      <h3 className="text-lg font-semibold mb-2">
+                      <h3 className="font-semibold text-lg mb-2">
                         Nachricht gesendet!
                       </h3>
                       <p className="text-muted-foreground">
-                        Wir haben deine Anfrage erhalten und melden uns
-                        schnellstmöglich bei dir.
+                        Wir werden uns innerhalb von 24 Stunden bei dir melden.
                       </p>
                     </div>
                   ) : (
                     <form onSubmit={handleSubmit} className="space-y-4">
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="firstName">Vorname</Label>
-                          <Input id="firstName" required />
+                          <Label htmlFor="name">Name *</Label>
+                          <Input
+                            id="name"
+                            placeholder="Dein Name"
+                            className="mt-1 bg-background"
+                            required
+                          />
                         </div>
                         <div>
-                          <Label htmlFor="lastName">Nachname</Label>
-                          <Input id="lastName" required />
+                          <Label htmlFor="email">E-Mail *</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="deine@email.de"
+                            className="mt-1 bg-background"
+                            required
+                          />
                         </div>
                       </div>
                       <div>
-                        <Label htmlFor="email">E-Mail</Label>
-                        <Input id="email" type="email" required />
-                      </div>
-                      <div>
-                        <Label htmlFor="topic">Thema</Label>
-                        <Select required>
-                          <SelectTrigger id="topic">
-                            <SelectValue placeholder="Wähle ein Thema" />
+                        <Label>Thema *</Label>
+                        <Select>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="Thema auswählen" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="general">
-                              Allgemeine Anfrage
-                            </SelectItem>
-                            <SelectItem value="licensing">
-                              Lizenzierung
-                            </SelectItem>
-                            <SelectItem value="technical">
-                              Technischer Support
-                            </SelectItem>
-                            <SelectItem value="billing">
-                              Zahlung & Rechnung
-                            </SelectItem>
-                            <SelectItem value="partnership">
-                              Partnerschaft
-                            </SelectItem>
-                            <SelectItem value="other">Sonstiges</SelectItem>
+                            {topics.map((topic) => (
+                              <SelectItem key={topic.value} value={topic.value}>
+                                {topic.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <Label htmlFor="message">Nachricht</Label>
+                        <Label htmlFor="subject">Betreff *</Label>
+                        <Input
+                          id="subject"
+                          placeholder="Worum geht es?"
+                          className="mt-1 bg-background"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="message">Nachricht *</Label>
                         <Textarea
                           id="message"
+                          placeholder="Beschreibe dein Anliegen..."
+                          className="mt-1 bg-background"
                           rows={5}
-                          placeholder="Wie können wir dir helfen?"
                           required
                         />
                       </div>
                       <Button
                         type="submit"
-                        className="w-full bg-primary hover:bg-primary/90"
                         disabled={isSubmitting}
+                        className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                       >
                         {isSubmitting ? (
                           <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                            <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
                             Wird gesendet...
                           </>
                         ) : (
@@ -219,83 +288,66 @@ export default function ContactPage() {
               </Card>
             </motion.div>
 
-            {/* Info */}
+            {/* FAQ */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="space-y-6"
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
             >
-              <Card className="bg-card border-border/50">
-                <CardContent className="p-6">
-                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                    <Building className="w-5 h-5 text-primary" />
-                    Unternehmen
-                  </h3>
-                  <div className="space-y-3 text-muted-foreground">
-                    <p className="font-medium text-foreground">
-                      Musicify GmbH
-                    </p>
-                    <p className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                      Musterstraße 123
-                      <br />
-                      10115 Berlin
-                      <br />
-                      Deutschland
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 flex-shrink-0" />
-                      hello@musicify.de
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 flex-shrink-0" />
-                      +49 30 12345678
+              <div className="flex items-center gap-2 mb-6">
+                <HelpCircle className="w-5 h-5 text-primary" />
+                <h2 className="font-serif text-2xl">Häufige Fragen</h2>
+              </div>
+
+              <Accordion type="single" collapsible className="space-y-2">
+                {faqs.map((faq, index) => (
+                  <AccordionItem
+                    key={index}
+                    value={`item-${index}`}
+                    className="bg-card/50 border border-border/50 rounded-lg px-4"
+                  >
+                    <AccordionTrigger className="text-left hover:no-underline">
+                      {faq.question}
+                    </AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground">
+                      {faq.answer}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+
+              <Card className="mt-8 bg-primary/10 border-primary/20">
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium mb-1">Mehr Fragen?</p>
+                    <p className="text-sm text-muted-foreground">
+                      Besuche unser ausführliches{" "}
+                      <a href="/help" className="text-primary hover:underline">
+                        Hilfe-Center
+                      </a>{" "}
+                      für weitere Informationen.
                     </p>
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border/50">
-                <CardContent className="p-6">
-                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-primary" />
-                    Support-Zeiten
-                  </h3>
-                  <div className="space-y-2 text-muted-foreground">
-                    <div className="flex justify-between">
-                      <span>Montag - Freitag</span>
-                      <span className="text-foreground">9:00 - 18:00</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Samstag</span>
-                      <span className="text-foreground">10:00 - 14:00</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Sonntag</span>
-                      <span className="text-foreground">Geschlossen</span>
-                    </div>
-                    <p className="text-sm pt-2">
-                      Alle Zeiten in MEZ/MESZ (Berlin)
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-primary/5 border-primary/10">
-                <CardContent className="p-6">
-                  <h3 className="font-semibold text-lg mb-2">
-                    Schnelle Hilfe gesucht?
-                  </h3>
-                  <p className="text-muted-foreground mb-4">
-                    In unseren FAQs findest du Antworten auf die häufigsten
-                    Fragen.
-                  </p>
-                  <Button variant="outline" asChild>
-                    <a href="/pricing#faq">Zu den FAQs</a>
-                  </Button>
                 </CardContent>
               </Card>
             </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Map Placeholder */}
+      <section className="py-16 bg-card">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="aspect-[21/9] rounded-2xl bg-secondary/50 flex items-center justify-center overflow-hidden">
+            <div className="text-center">
+              <MapPin className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+              <p className="text-muted-foreground">
+                Musicify GmbH · Musterstraße 123 · 10115 Berlin
+              </p>
+            </div>
           </div>
         </div>
       </section>

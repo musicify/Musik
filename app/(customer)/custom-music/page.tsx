@@ -1,343 +1,195 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft,
-  ArrowRight,
+  ChevronRight,
+  ChevronLeft,
   Check,
   Music,
-  Smile,
-  Target,
-  Users,
-  FileText,
-  Euro,
+  Mic2,
   Clock,
+  Euro,
   Star,
   Award,
-  ChevronRight,
-  Loader2,
-  Sparkles,
   Info,
+  Upload,
+  FileText,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { GENRES, MOODS, USE_CASES, ERAS } from "@/lib/constants";
 
-// Mock directors data
-const mockDirectors = [
+// Step data
+const steps = [
+  { id: 1, title: "Stil & Genre", icon: Music },
+  { id: 2, title: "Details", icon: FileText },
+  { id: 3, title: "Komponist", icon: Mic2 },
+  { id: 4, title: "Übersicht", icon: Check },
+];
+
+// Options data
+const genres = [
+  { value: "electronic", label: "Electronic", icon: "🎹" },
+  { value: "cinematic", label: "Cinematic", icon: "🎬" },
+  { value: "pop", label: "Pop", icon: "🎤" },
+  { value: "hiphop", label: "Hip-Hop", icon: "🎧" },
+  { value: "rock", label: "Rock", icon: "🎸" },
+  { value: "classical", label: "Classical", icon: "🎻" },
+  { value: "ambient", label: "Ambient", icon: "🌊" },
+  { value: "jazz", label: "Jazz", icon: "🎷" },
+  { value: "corporate", label: "Corporate", icon: "🏢" },
+  { value: "world", label: "World Music", icon: "🌍" },
+];
+
+const moods = [
+  { value: "energetic", label: "Energetisch" },
+  { value: "uplifting", label: "Erhebend" },
+  { value: "melancholic", label: "Melancholisch" },
+  { value: "dramatic", label: "Dramatisch" },
+  { value: "relaxed", label: "Entspannt" },
+  { value: "dark", label: "Düster" },
+  { value: "happy", label: "Fröhlich" },
+  { value: "epic", label: "Episch" },
+  { value: "mysterious", label: "Mysteriös" },
+  { value: "romantic", label: "Romantisch" },
+];
+
+const useCases = [
+  { value: "advertising", label: "Werbung" },
+  { value: "youtube", label: "YouTube" },
+  { value: "film", label: "Film / TV" },
+  { value: "podcast", label: "Podcast" },
+  { value: "gaming", label: "Gaming" },
+  { value: "corporate", label: "Corporate" },
+  { value: "social", label: "Social Media" },
+  { value: "events", label: "Events" },
+];
+
+const directors = [
   {
     id: "dir1",
     name: "Max Müller",
     specialization: ["Electronic", "Cinematic"],
-    priceRange: "200 - 800",
-    badge: "PREMIUM" as const,
+    priceRange: "ab €200",
+    badge: "PREMIUM",
     rating: 4.9,
     projects: 127,
-    responseTime: 4,
+    responseTime: "< 2h",
     avatarGradient: "from-violet-500 to-purple-600",
   },
   {
     id: "dir2",
     name: "Sarah Schmidt",
     specialization: ["Orchestral", "Film"],
-    priceRange: "350 - 1200",
-    badge: "TOP_SELLER" as const,
+    priceRange: "ab €350",
+    badge: "TOP_SELLER",
     rating: 4.8,
     projects: 89,
-    responseTime: 6,
+    responseTime: "< 4h",
     avatarGradient: "from-amber-500 to-yellow-500",
   },
   {
     id: "dir3",
     name: "Tom Weber",
-    specialization: ["Hip-Hop", "Pop", "R&B"],
-    priceRange: "150 - 500",
-    badge: "VERIFIED" as const,
+    specialization: ["Hip-Hop", "Pop"],
+    priceRange: "ab €150",
+    badge: "VERIFIED",
     rating: 4.7,
     projects: 64,
-    responseTime: 8,
+    responseTime: "< 6h",
     avatarGradient: "from-cyan-500 to-teal-500",
   },
   {
-    id: "dir4",
-    name: "Lisa Braun",
-    specialization: ["Ambient", "Electronic"],
-    priceRange: "180 - 600",
-    badge: "VERIFIED" as const,
-    rating: 4.6,
-    projects: 42,
-    responseTime: 12,
-    avatarGradient: "from-rose-500 to-pink-500",
+    id: "dir6",
+    name: "Nina Hofmann",
+    specialization: ["Corporate", "Advertising"],
+    priceRange: "ab €250",
+    badge: "PREMIUM",
+    rating: 4.8,
+    projects: 156,
+    responseTime: "< 3h",
+    avatarGradient: "from-emerald-500 to-teal-600",
   },
 ];
 
-interface OrderFormData {
-  // Step 1: Style & Genre
-  genres: string[];
-  moods: string[];
-  useCases: string[];
-  era: string;
-  // Step 2: Details
-  title: string;
-  description: string;
-  references: string;
-  duration: number;
-  // Step 3: Director Selection
-  selectedDirectors: string[];
-  // Step 4: Budget & Submit
-  budgetMin: number;
-  budgetMax: number;
-  deadline: string;
-  paymentModel: "PAY_ON_COMPLETION" | "PARTIAL_PAYMENT";
-  acceptTerms: boolean;
-}
-
-const initialFormData: OrderFormData = {
-  genres: [],
-  moods: [],
-  useCases: [],
-  era: "",
-  title: "",
-  description: "",
-  references: "",
-  duration: 180,
-  selectedDirectors: [],
-  budgetMin: 200,
-  budgetMax: 500,
-  deadline: "",
-  paymentModel: "PAY_ON_COMPLETION",
-  acceptTerms: false,
-};
-
-const steps = [
-  { id: 1, name: "Stil & Genre", icon: Music },
-  { id: 2, name: "Details", icon: FileText },
-  { id: 3, name: "Komponist", icon: Users },
-  { id: 4, name: "Budget & Absenden", icon: Euro },
-];
-
-function StepIndicator({ currentStep }: { currentStep: number }) {
-  return (
-    <div className="flex items-center justify-center gap-2 mb-8">
-      {steps.map((step, index) => (
-        <div key={step.id} className="flex items-center">
-          <div
-            className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${
-              currentStep >= step.id
-                ? "bg-primary border-primary text-primary-foreground"
-                : "border-muted-foreground/30 text-muted-foreground"
-            }`}
-          >
-            {currentStep > step.id ? (
-              <Check className="w-5 h-5" />
-            ) : (
-              <step.icon className="w-5 h-5" />
-            )}
-          </div>
-          {index < steps.length - 1 && (
-            <div
-              className={`w-12 h-0.5 mx-2 transition-colors ${
-                currentStep > step.id ? "bg-primary" : "bg-muted-foreground/30"
-              }`}
-            />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function MultiSelect({
-  label,
-  options,
-  selected,
-  onChange,
-  maxSelection,
-}: {
-  label: string;
-  options: readonly string[];
-  selected: string[];
-  onChange: (selected: string[]) => void;
-  maxSelection?: number;
-}) {
-  const toggleOption = (option: string) => {
-    if (selected.includes(option)) {
-      onChange(selected.filter((s) => s !== option));
-    } else if (!maxSelection || selected.length < maxSelection) {
-      onChange([...selected, option]);
-    }
+function BadgeIcon({ badge }: { badge: string | null }) {
+  if (!badge) return null;
+  const badgeConfig = {
+    PREMIUM: { icon: Award, className: "badge-premium" },
+    TOP_SELLER: { icon: Star, className: "badge-top-seller" },
+    VERIFIED: { icon: Check, className: "badge-verified" },
   };
-
+  const config = badgeConfig[badge as keyof typeof badgeConfig];
+  if (!config) return null;
   return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <Label className="text-base">{label}</Label>
-        {maxSelection && (
-          <span className="text-xs text-muted-foreground">
-            {selected.length}/{maxSelection} gewählt
-          </span>
-        )}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {options.map((option) => (
-          <Badge
-            key={option}
-            variant={selected.includes(option) ? "default" : "outline"}
-            className={`cursor-pointer transition-all py-1.5 px-3 ${
-              selected.includes(option)
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-secondary"
-            }`}
-            onClick={() => toggleOption(option)}
-          >
-            {option}
-          </Badge>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function DirectorCard({
-  director,
-  isSelected,
-  onToggle,
-}: {
-  director: (typeof mockDirectors)[0];
-  isSelected: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <Card
-      className={`cursor-pointer transition-all ${
-        isSelected
-          ? "border-primary shadow-glow-sm"
-          : "border-border/50 hover:border-border"
-      }`}
-      onClick={onToggle}
-    >
-      <CardContent className="p-4">
-        <div className="flex items-start gap-4">
-          {/* Avatar */}
-          <div
-            className={`w-14 h-14 rounded-xl bg-gradient-to-br ${director.avatarGradient} flex items-center justify-center text-white text-xl font-serif flex-shrink-0`}
-          >
-            {director.name.charAt(0)}
-          </div>
-
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold">{director.name}</h3>
-              <Badge
-                className={
-                  director.badge === "PREMIUM"
-                    ? "badge-premium"
-                    : director.badge === "TOP_SELLER"
-                    ? "badge-top-seller"
-                    : "badge-verified"
-                }
-              >
-                {director.badge === "PREMIUM" && (
-                  <Award className="w-3 h-3 mr-1" />
-                )}
-                {director.badge === "TOP_SELLER" && (
-                  <Star className="w-3 h-3 mr-1" />
-                )}
-                {director.badge === "VERIFIED" && (
-                  <Check className="w-3 h-3 mr-1" />
-                )}
-                {director.badge.replace("_", " ")}
+    <Badge className={config.className}>
+      <config.icon className="w-3 h-3 mr-1" />
+      {badge.replace("_", " ")}
               </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground mb-2">
-              {director.specialization.join(" · ")}
-            </p>
-            <div className="flex items-center gap-4 text-sm">
-              <span className="flex items-center gap-1">
-                <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                {director.rating}
-              </span>
-              <span className="text-muted-foreground">
-                {director.projects} Projekte
-              </span>
-              <span className="flex items-center gap-1 text-muted-foreground">
-                <Clock className="w-3.5 h-3.5" />
-                ~{director.responseTime}h
-              </span>
-            </div>
-          </div>
-
-          {/* Price & Selection */}
-          <div className="text-right">
-            <p className="text-primary font-medium">€{director.priceRange}</p>
-            <div
-              className={`mt-2 w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                isSelected
-                  ? "border-primary bg-primary"
-                  : "border-muted-foreground/50"
-              }`}
-            >
-              {isSelected && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
 export default function CustomMusicPage() {
-  const router = useRouter();
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState<OrderFormData>(initialFormData);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState({
+    genres: [] as string[],
+    moods: [] as string[],
+    useCases: [] as string[],
+    title: "",
+    description: "",
+    references: "",
+    duration: [120],
+    budget: [500],
+    deadline: "",
+    selectedDirectors: [] as string[],
+    license: "commercial",
+  });
 
-  const progress = (step / steps.length) * 100;
+  const progress = (currentStep / steps.length) * 100;
+
+  const updateFormData = (key: string, value: unknown) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const toggleArrayValue = (key: string, value: string) => {
+    setFormData((prev) => {
+      const arr = prev[key as keyof typeof prev] as string[];
+      if (arr.includes(value)) {
+        return { ...prev, [key]: arr.filter((v) => v !== value) };
+      } else {
+        return { ...prev, [key]: [...arr, value] };
+      }
+    });
+  };
 
   const canProceed = () => {
-    switch (step) {
+    switch (currentStep) {
       case 1:
         return formData.genres.length > 0 && formData.moods.length > 0;
       case 2:
-        return formData.title.length >= 5 && formData.description.length >= 20;
+        return formData.title.length > 0 && formData.description.length > 10;
       case 3:
         return formData.selectedDirectors.length > 0;
-      case 4:
-        return formData.acceptTerms;
       default:
         return true;
     }
   };
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    // Redirect to order confirmation
-    router.push("/orders/confirmation");
-  };
-
   return (
     <div className="min-h-screen pt-20 pb-16">
       {/* Hero Section */}
-      <section className="relative py-8 lg:py-12 overflow-hidden">
+      <section className="relative py-12 overflow-hidden">
         <div className="absolute inset-0 hero-gradient opacity-50" />
         <div className="absolute inset-0 pattern-dots opacity-20" />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
@@ -350,35 +202,77 @@ export default function CustomMusicPage() {
                 <Sparkles className="w-3 h-3 mr-1" />
                 Custom Music
               </Badge>
-              <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl mb-4">
-                Musik auf <span className="gradient-text">Bestellung</span>
+              <h1 className="font-serif text-4xl sm:text-5xl mb-4">
+                Deine <span className="gradient-text">Vision</span>, unser Sound
               </h1>
-              <p className="text-muted-foreground">
-                Beschreibe dein Projekt und erhalte maßgeschneiderte Musik von
-                professionellen Komponisten.
+              <p className="text-lg text-muted-foreground">
+                Beschreibe dein Projekt und wähle aus unseren verifizierten
+                Komponisten. Erhalte maßgeschneiderte Musik für dein Projekt.
               </p>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Progress Bar */}
+      {/* Progress Steps */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-        <Progress value={progress} className="h-2" />
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            {steps.map((step, index) => (
+              <div
+                key={step.id}
+                className={`flex items-center ${
+                  index < steps.length - 1 ? "flex-1" : ""
+                }`}
+              >
+                <div
+                  className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors ${
+                    currentStep >= step.id
+                      ? "bg-primary border-primary text-primary-foreground"
+                      : "border-border text-muted-foreground"
+                  }`}
+                >
+                  {currentStep > step.id ? (
+                    <Check className="w-5 h-5" />
+                  ) : (
+                    <step.icon className="w-5 h-5" />
+                  )}
+                </div>
+                {index < steps.length - 1 && (
+                  <div
+                    className={`flex-1 h-0.5 mx-4 transition-colors ${
+                      currentStep > step.id ? "bg-primary" : "bg-border"
+                    }`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between text-sm">
+            {steps.map((step) => (
+              <span
+                key={step.id}
+                className={
+                  currentStep >= step.id
+                    ? "text-foreground font-medium"
+                    : "text-muted-foreground"
+                }
+              >
+                {step.title}
+              </span>
+            ))}
+          </div>
       </div>
-
-      {/* Step Indicator */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <StepIndicator currentStep={step} />
       </div>
 
       {/* Form Content */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <Card className="max-w-4xl mx-auto bg-card/50 border-border/50">
-          <CardContent className="p-6 sm:p-8">
+        <div className="max-w-4xl mx-auto">
+          <Card className="bg-card/50 border-border/50">
+            <CardContent className="p-8">
             <AnimatePresence mode="wait">
               {/* Step 1: Style & Genre */}
-              {step === 1 && (
+                {currentStep === 1 && (
                 <motion.div
                   key="step1"
                   initial={{ opacity: 0, x: 20 }}
@@ -387,64 +281,79 @@ export default function CustomMusicPage() {
                   className="space-y-8"
                 >
                   <div>
-                    <h2 className="font-serif text-2xl mb-2">Stil & Genre</h2>
-                    <p className="text-muted-foreground">
-                      Welche Art von Musik suchst du?
-                    </p>
+                      <Label className="text-lg font-semibold mb-4 block">
+                        Welches Genre suchen Sie?
+                      </Label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                        {genres.map((genre) => (
+                          <button
+                            key={genre.value}
+                            onClick={() => toggleArrayValue("genres", genre.value)}
+                            className={`p-4 rounded-lg border-2 text-center transition-all ${
+                              formData.genres.includes(genre.value)
+                                ? "border-primary bg-primary/10"
+                                : "border-border hover:border-border/80"
+                            }`}
+                          >
+                            <span className="text-2xl mb-2 block">
+                              {genre.icon}
+                            </span>
+                            <span className="text-sm font-medium">
+                              {genre.label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
                   </div>
 
-                  <MultiSelect
-                    label="Genre (wähle bis zu 3)"
-                    options={GENRES}
-                    selected={formData.genres}
-                    onChange={(genres) =>
-                      setFormData({ ...formData, genres })
-                    }
-                    maxSelection={3}
-                  />
-
-                  <MultiSelect
-                    label="Stimmung (wähle bis zu 3)"
-                    options={MOODS}
-                    selected={formData.moods}
-                    onChange={(moods) => setFormData({ ...formData, moods })}
-                    maxSelection={3}
-                  />
-
-                  <MultiSelect
-                    label="Verwendungszweck"
-                    options={USE_CASES}
-                    selected={formData.useCases}
-                    onChange={(useCases) =>
-                      setFormData({ ...formData, useCases })
-                    }
-                    maxSelection={2}
-                  />
+                    <div>
+                      <Label className="text-lg font-semibold mb-4 block">
+                        Welche Stimmung soll die Musik haben?
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {moods.map((mood) => (
+                          <button
+                            key={mood.value}
+                            onClick={() => toggleArrayValue("moods", mood.value)}
+                            className={`px-4 py-2 rounded-full border-2 text-sm font-medium transition-all ${
+                              formData.moods.includes(mood.value)
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-border hover:border-border/80"
+                            }`}
+                          >
+                            {mood.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
                   <div>
-                    <Label className="text-base mb-3 block">Epoche / Stil</Label>
+                      <Label className="text-lg font-semibold mb-4 block">
+                        Wofür wird die Musik verwendet?
+                      </Label>
                     <div className="flex flex-wrap gap-2">
-                      {ERAS.map((era) => (
-                        <Badge
-                          key={era}
-                          variant={formData.era === era ? "default" : "outline"}
-                          className={`cursor-pointer transition-all py-1.5 px-3 ${
-                            formData.era === era
-                              ? "bg-primary text-primary-foreground"
-                              : "hover:bg-secondary"
-                          }`}
-                          onClick={() => setFormData({ ...formData, era })}
-                        >
-                          {era}
-                        </Badge>
-                      ))}
-                    </div>
+                        {useCases.map((useCase) => (
+                          <button
+                            key={useCase.value}
+                            onClick={() =>
+                              toggleArrayValue("useCases", useCase.value)
+                            }
+                            className={`px-4 py-2 rounded-full border-2 text-sm font-medium transition-all ${
+                              formData.useCases.includes(useCase.value)
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-border hover:border-border/80"
+                            }`}
+                          >
+                            {useCase.label}
+                          </button>
+                        ))}
+                      </div>
                   </div>
                 </motion.div>
               )}
 
               {/* Step 2: Details */}
-              {step === 2 && (
+                {currentStep === 2 && (
                 <motion.div
                   key="step2"
                   initial={{ opacity: 0, x: 20 }}
@@ -453,86 +362,150 @@ export default function CustomMusicPage() {
                   className="space-y-6"
                 >
                   <div>
-                    <h2 className="font-serif text-2xl mb-2">Projektdetails</h2>
-                    <p className="text-muted-foreground">
-                      Beschreibe dein Projekt so detailliert wie möglich.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Projekttitel *</Label>
+                      <Label htmlFor="title" className="text-lg font-semibold mb-2 block">
+                        Projekttitel
+                      </Label>
                     <Input
                       id="title"
                       placeholder="z.B. Corporate Video Soundtrack"
                       value={formData.title}
-                      onChange={(e) =>
-                        setFormData({ ...formData, title: e.target.value })
-                      }
-                      className="h-12"
+                        onChange={(e) => updateFormData("title", e.target.value)}
+                        className="bg-background"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="description">
-                      Detaillierte Beschreibung *
+                    <div>
+                      <Label htmlFor="description" className="text-lg font-semibold mb-2 block">
+                        Beschreibung
                     </Label>
                     <Textarea
                       id="description"
-                      placeholder="Beschreibe, welche Musik du dir vorstellst. Was ist der Kontext? Welche Emotionen soll die Musik vermitteln? Gibt es bestimmte Instrumente oder Sounds, die du dir wünschst?"
+                        placeholder="Beschreiben Sie Ihr Projekt und Ihre Anforderungen so detailliert wie möglich..."
                       value={formData.description}
                       onChange={(e) =>
-                        setFormData({ ...formData, description: e.target.value })
+                          updateFormData("description", e.target.value)
                       }
-                      className="min-h-[150px]"
+                        rows={5}
+                        className="bg-background"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      {formData.description.length}/500 Zeichen (min. 20)
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Je detaillierter, desto besser können unsere Komponisten
+                        Ihre Vision umsetzen.
                     </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="references">
+                    <div>
+                      <Label htmlFor="references" className="text-lg font-semibold mb-2 block">
                       Referenzen (optional)
                     </Label>
                     <Textarea
                       id="references"
-                      placeholder="Gibt es Songs oder Künstler, die als Inspiration dienen können? Füge Links zu Beispielen hinzu."
+                        placeholder="Links zu Musik, die Sie inspiriert hat, oder Beispiele für den gewünschten Stil..."
                       value={formData.references}
                       onChange={(e) =>
-                        setFormData({ ...formData, references: e.target.value })
-                      }
-                      className="min-h-[100px]"
-                    />
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label>Gewünschte Länge</Label>
-                      <span className="text-sm text-muted-foreground">
-                        {Math.floor(formData.duration / 60)}:
-                        {(formData.duration % 60).toString().padStart(2, "0")}{" "}
-                        min
-                      </span>
+                          updateFormData("references", e.target.value)
+                        }
+                        rows={3}
+                        className="bg-background"
+                      />
                     </div>
+
+                    <div className="grid sm:grid-cols-2 gap-6">
+                      <div>
+                        <Label className="text-lg font-semibold mb-4 block">
+                          Gewünschte Länge: {Math.floor(formData.duration[0] / 60)}:
+                          {(formData.duration[0] % 60).toString().padStart(2, "0")} min
+                        </Label>
                     <Slider
-                      value={[formData.duration]}
+                          value={formData.duration}
+                          onValueChange={(value) =>
+                            updateFormData("duration", value)
+                          }
                       min={30}
                       max={600}
                       step={30}
-                      onValueChange={([duration]) =>
-                        setFormData({ ...formData, duration })
-                      }
+                          className="py-4"
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>30 Sek</span>
+                          <span>10 Min</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-lg font-semibold mb-4 block">
+                          Budget: €{formData.budget[0]}
+                        </Label>
+                        <Slider
+                          value={formData.budget}
+                          onValueChange={(value) => updateFormData("budget", value)}
+                          min={100}
+                          max={5000}
+                          step={50}
+                          className="py-4"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>0:30</span>
-                      <span>10:00</span>
+                          <span>€100</span>
+                          <span>€5.000</span>
+                        </div>
+                      </div>
                     </div>
+
+                    <div>
+                      <Label className="text-lg font-semibold mb-4 block">
+                        Lizenztyp
+                      </Label>
+                      <RadioGroup
+                        value={formData.license}
+                        onValueChange={(value) => updateFormData("license", value)}
+                        className="grid sm:grid-cols-3 gap-4"
+                      >
+                        {[
+                          { value: "personal", label: "Personal", price: "+0%" },
+                          {
+                            value: "commercial",
+                            label: "Commercial",
+                            price: "+50%",
+                            popular: true,
+                          },
+                          {
+                            value: "enterprise",
+                            label: "Enterprise",
+                            price: "+200%",
+                          },
+                        ].map((option) => (
+                          <label
+                            key={option.value}
+                            className={`relative flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                              formData.license === option.value
+                                ? "border-primary bg-primary/10"
+                                : "border-border"
+                            }`}
+                          >
+                            <RadioGroupItem
+                              value={option.value}
+                              className="sr-only"
+                            />
+                            <div className="flex-1">
+                              <p className="font-medium">{option.label}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {option.price}
+                              </p>
+                            </div>
+                            {option.popular && (
+                              <Badge className="absolute -top-2 -right-2 bg-primary text-primary-foreground">
+                                Beliebt
+                              </Badge>
+                            )}
+                          </label>
+                        ))}
+                      </RadioGroup>
                   </div>
                 </motion.div>
               )}
 
-              {/* Step 3: Director Selection */}
-              {step === 3 && (
+                {/* Step 3: Select Director */}
+                {currentStep === 3 && (
                 <motion.div
                   key="step3"
                   initial={{ opacity: 0, x: 20 }}
@@ -541,72 +514,87 @@ export default function CustomMusicPage() {
                   className="space-y-6"
                 >
                   <div>
-                    <h2 className="font-serif text-2xl mb-2">
-                      Komponisten wählen
-                    </h2>
-                    <p className="text-muted-foreground">
-                      Wähle einen oder mehrere Komponisten, die deinen Auftrag
-                      erhalten sollen.
+                      <Label className="text-lg font-semibold mb-2 block">
+                        Wählen Sie einen oder mehrere Komponisten
+                      </Label>
+                      <p className="text-sm text-muted-foreground mb-6">
+                        Die ausgewählten Komponisten erhalten Ihre Anfrage und
+                        können Ihnen ein Angebot unterbreiten.
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
-                    <div className="flex items-center gap-2">
-                      <Info className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        {formData.selectedDirectors.length} Komponist(en)
-                        ausgewählt
-                      </span>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      Je mehr Komponisten, desto mehr Angebote
-                    </span>
-                  </div>
-
                   <div className="space-y-4">
-                    {mockDirectors.map((director) => (
-                      <DirectorCard
+                      {directors.map((director) => (
+                        <div
                         key={director.id}
-                        director={director}
-                        isSelected={formData.selectedDirectors.includes(
-                          director.id
-                        )}
-                        onToggle={() => {
-                          if (
-                            formData.selectedDirectors.includes(director.id)
-                          ) {
-                            setFormData({
-                              ...formData,
-                              selectedDirectors:
-                                formData.selectedDirectors.filter(
-                                  (id) => id !== director.id
-                                ),
-                            });
-                          } else {
-                            setFormData({
-                              ...formData,
-                              selectedDirectors: [
-                                ...formData.selectedDirectors,
-                                director.id,
-                              ],
-                            });
+                          onClick={() =>
+                            toggleArrayValue("selectedDirectors", director.id)
                           }
-                        }}
-                      />
+                          className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                            formData.selectedDirectors.includes(director.id)
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-border/80"
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="relative">
+                              <Avatar className="w-14 h-14">
+                                <AvatarFallback
+                                  className={`bg-gradient-to-br ${director.avatarGradient} text-white text-lg font-serif`}
+                                >
+                                  {director.name.charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
+                              {formData.selectedDirectors.includes(director.id) && (
+                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                                  <Check className="w-3 h-3 text-primary-foreground" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-semibold">
+                                  {director.name}
+                                </span>
+                                <BadgeIcon badge={director.badge} />
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {director.specialization.join(" · ")}
+                              </p>
+                              <div className="flex items-center gap-4 mt-1 text-sm">
+                                <span className="flex items-center gap-1">
+                                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                                  {director.rating}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {director.projects} Projekte
+                                </span>
+                                <span className="text-muted-foreground">
+                                  Antwort {director.responseTime}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-primary font-semibold">
+                                {director.priceRange}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                     ))}
                   </div>
 
                   <Link href="/directors">
-                    <Button variant="ghost" className="w-full">
+                      <Button variant="outline" className="w-full">
                       Alle Komponisten ansehen
-                      <ChevronRight className="w-4 h-4 ml-1" />
+                        <ChevronRight className="w-4 h-4 ml-2" />
                     </Button>
                   </Link>
                 </motion.div>
               )}
 
-              {/* Step 4: Budget & Submit */}
-              {step === 4 && (
+                {/* Step 4: Summary */}
+                {currentStep === 4 && (
                 <motion.div
                   key="step4"
                   initial={{ opacity: 0, x: 20 }}
@@ -614,249 +602,122 @@ export default function CustomMusicPage() {
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-6"
                 >
-                  <div>
+                    <div className="text-center mb-8">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Check className="w-8 h-8 text-primary" />
+                      </div>
                     <h2 className="font-serif text-2xl mb-2">
-                      Budget & Absenden
+                        Alles bereit für deinen Auftrag!
                     </h2>
                     <p className="text-muted-foreground">
-                      Fast geschafft! Gib dein Budget an und sende den Auftrag
-                      ab.
+                        Überprüfe deine Angaben und sende die Anfrage ab.
                     </p>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label>Budgetrahmen</Label>
-                      <span className="text-sm font-medium text-primary">
-                        €{formData.budgetMin} - €{formData.budgetMax}
-                      </span>
-                    </div>
-                    <Slider
-                      value={[formData.budgetMin, formData.budgetMax]}
-                      min={50}
-                      max={2000}
-                      step={50}
-                      onValueChange={([min, max]) =>
-                        setFormData({
-                          ...formData,
-                          budgetMin: min,
-                          budgetMax: max,
-                        })
-                      }
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>€50</span>
-                      <span>€2.000</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="deadline">Gewünschte Deadline (optional)</Label>
-                    <Input
-                      id="deadline"
-                      type="date"
-                      value={formData.deadline}
-                      onChange={(e) =>
-                        setFormData({ ...formData, deadline: e.target.value })
-                      }
-                      className="h-12"
-                    />
-                  </div>
-
-                  <div className="space-y-4">
-                    <Label>Zahlungsmodell</Label>
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <Card
-                        className={`cursor-pointer transition-all ${
-                          formData.paymentModel === "PAY_ON_COMPLETION"
-                            ? "border-primary"
-                            : "border-border/50"
-                        }`}
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            paymentModel: "PAY_ON_COMPLETION",
-                          })
-                        }
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                formData.paymentModel === "PAY_ON_COMPLETION"
-                                  ? "border-primary bg-primary"
-                                  : "border-muted-foreground/50"
-                              }`}
-                            >
-                              {formData.paymentModel === "PAY_ON_COMPLETION" && (
-                                <Check className="w-3 h-3 text-primary-foreground" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium">
-                                Zahlung nach Fertigstellung
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                100% bei Abnahme
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      <Card
-                        className={`cursor-pointer transition-all ${
-                          formData.paymentModel === "PARTIAL_PAYMENT"
-                            ? "border-primary"
-                            : "border-border/50"
-                        }`}
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            paymentModel: "PARTIAL_PAYMENT",
-                          })
-                        }
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                formData.paymentModel === "PARTIAL_PAYMENT"
-                                  ? "border-primary bg-primary"
-                                  : "border-muted-foreground/50"
-                              }`}
-                            >
-                              {formData.paymentModel === "PARTIAL_PAYMENT" && (
-                                <Check className="w-3 h-3 text-primary-foreground" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium">Teilzahlung</p>
-                              <p className="text-xs text-muted-foreground">
-                                30% Anzahlung, 70% bei Abnahme
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </div>
-
-                  {/* Summary */}
-                  <Card className="bg-secondary/50 border-none">
-                    <CardContent className="p-4">
-                      <h4 className="font-medium mb-3">Zusammenfassung</h4>
-                      <dl className="space-y-2 text-sm">
+                    <Card className="bg-secondary/50 border-border/50">
+                      <CardContent className="p-6 space-y-4">
                         <div className="flex justify-between">
-                          <dt className="text-muted-foreground">Projekt</dt>
-                          <dd>{formData.title || "-"}</dd>
+                          <span className="text-muted-foreground">Projekt</span>
+                          <span className="font-medium">{formData.title}</span>
+                  </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Genre</span>
+                          <span className="font-medium">
+                            {formData.genres
+                              .map(
+                                (g) => genres.find((genre) => genre.value === g)?.label
+                              )
+                              .join(", ")}
+                          </span>
                         </div>
                         <div className="flex justify-between">
-                          <dt className="text-muted-foreground">Genre</dt>
-                          <dd>{formData.genres.join(", ") || "-"}</dd>
+                          <span className="text-muted-foreground">Stimmung</span>
+                          <span className="font-medium">
+                            {formData.moods
+                              .map((m) => moods.find((mood) => mood.value === m)?.label)
+                              .join(", ")}
+                          </span>
                         </div>
                         <div className="flex justify-between">
-                          <dt className="text-muted-foreground">Länge</dt>
-                          <dd>
-                            {Math.floor(formData.duration / 60)}:
-                            {(formData.duration % 60)
+                          <span className="text-muted-foreground">Länge</span>
+                          <span className="font-medium">
+                            {Math.floor(formData.duration[0] / 60)}:
+                            {(formData.duration[0] % 60)
                               .toString()
                               .padStart(2, "0")}{" "}
                             min
-                          </dd>
+                          </span>
                         </div>
                         <div className="flex justify-between">
-                          <dt className="text-muted-foreground">Komponisten</dt>
-                          <dd>{formData.selectedDirectors.length}</dd>
+                          <span className="text-muted-foreground">Budget</span>
+                          <span className="font-medium">€{formData.budget[0]}</span>
                         </div>
                         <div className="flex justify-between">
-                          <dt className="text-muted-foreground">Budget</dt>
-                          <dd className="text-primary font-medium">
-                            €{formData.budgetMin} - €{formData.budgetMax}
-                          </dd>
+                          <span className="text-muted-foreground">Lizenz</span>
+                          <span className="font-medium capitalize">
+                            {formData.license}
+                          </span>
                         </div>
-                      </dl>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Komponisten</span>
+                          <span className="font-medium">
+                            {formData.selectedDirectors
+                              .map((id) => directors.find((d) => d.id === id)?.name)
+                              .join(", ")}
+                          </span>
+                        </div>
                     </CardContent>
                   </Card>
 
-                  <div className="flex items-start space-x-2">
-                    <Checkbox
-                      id="terms"
-                      checked={formData.acceptTerms}
-                      onCheckedChange={(checked) =>
-                        setFormData({
-                          ...formData,
-                          acceptTerms: checked as boolean,
-                        })
-                      }
-                      className="mt-1"
-                    />
-                    <Label
-                      htmlFor="terms"
-                      className="text-sm font-normal leading-relaxed"
-                    >
-                      Ich akzeptiere die{" "}
-                      <Link href="/terms" className="text-primary hover:underline">
-                        AGB
-                      </Link>{" "}
-                      und die{" "}
-                      <Link
-                        href="/privacy"
-                        className="text-primary hover:underline"
-                      >
-                        Datenschutzerklärung
-                      </Link>
-                      . Ich verstehe, dass die Komponisten unverbindliche
-                      Angebote abgeben werden.
-                    </Label>
+                    <div className="flex items-start gap-2 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                      <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm">
+                        <p className="font-medium text-blue-500">
+                          So geht es weiter
+                        </p>
+                        <p className="text-muted-foreground">
+                          Die ausgewählten Komponisten erhalten deine Anfrage per
+                          E-Mail und können dir innerhalb von 24-48 Stunden ein
+                          Angebot unterbreiten. Du kannst dann entscheiden, welches
+                          Angebot du annimmst.
+                        </p>
+                      </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
             {/* Navigation Buttons */}
-            <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
-              <Button
-                variant="ghost"
-                onClick={() => setStep(step - 1)}
-                disabled={step === 1}
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Zurück
-              </Button>
-
-              {step < 4 ? (
+              <div className="flex items-center justify-between mt-8 pt-6 border-t border-border/50">
                 <Button
-                  onClick={() => setStep(step + 1)}
-                  disabled={!canProceed()}
-                  className="bg-primary hover:bg-primary/90"
+                  variant="outline"
+                  onClick={() => setCurrentStep((s) => s - 1)}
+                  disabled={currentStep === 1}
                 >
-                  Weiter
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  <ChevronLeft className="w-4 h-4 mr-2" />
+                  Zurück
                 </Button>
-              ) : (
+
+                {currentStep < 4 ? (
                 <Button
-                  onClick={handleSubmit}
-                  disabled={!canProceed() || isSubmitting}
-                  className="bg-primary hover:bg-primary/90"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Wird gesendet...
-                    </>
-                  ) : (
-                    <>
-                      Auftrag absenden
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </>
-                  )}
+                    onClick={() => setCurrentStep((s) => s + 1)}
+                    disabled={!canProceed()}
+                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    Weiter
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                ) : (
+                  <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow hover:shadow-glow-lg">
+                    Anfrage absenden
+                    <Check className="w-4 h-4 ml-2" />
                 </Button>
               )}
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );
 }
-

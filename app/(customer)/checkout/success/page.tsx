@@ -1,167 +1,150 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Check, Download, FileText, Home, Music } from "lucide-react";
+import {
+  CheckCircle2,
+  Download,
+  FileText,
+  Mail,
+  ArrowRight,
+  Music,
+  Home,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import confetti from "canvas-confetti";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
-export default function CheckoutSuccessPage() {
-  const [showConfetti, setShowConfetti] = useState(false);
-
-  useEffect(() => {
-    // Trigger confetti animation
-    if (!showConfetti) {
-      setShowConfetti(true);
-      const duration = 3 * 1000;
-      const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
-
-      function randomInRange(min: number, max: number) {
-        return Math.random() * (max - min) + min;
-      }
-
-      const interval: NodeJS.Timeout = setInterval(function () {
-        const timeLeft = animationEnd - Date.now();
-
-        if (timeLeft <= 0) {
-          return clearInterval(interval);
-        }
-
-        const particleCount = 50 * (timeLeft / duration);
-
-        confetti({
-          ...defaults,
-          particleCount,
-          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-          colors: ["#8b5cf6", "#6366f1", "#ec4899", "#f472b6"],
-        });
-        confetti({
-          ...defaults,
-          particleCount,
-          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-          colors: ["#8b5cf6", "#6366f1", "#ec4899", "#f472b6"],
-        });
-      }, 250);
-    }
-  }, [showConfetti]);
-
-  // Mock purchased items
-  const purchasedItems = [
+// Mock order data
+const order = {
+  id: "ORD-2024-0047",
+  date: new Date().toLocaleDateString("de-DE"),
+  items: [
     {
       id: "1",
       title: "Neon Dreams",
-      artist: "Electronic Producer",
-      license: "COMMERCIAL",
-      downloadUrl: "#",
+      artist: "Max Müller",
+      license: "Commercial",
+      price: 49,
+      coverGradient: "from-purple-500 to-pink-500",
     },
     {
       id: "2",
-      title: "Corporate Success",
-      artist: "Max Müller",
-      license: "PERSONAL",
-      downloadUrl: "#",
+      title: "Epic Horizon",
+      artist: "Sarah Schmidt",
+      license: "Enterprise",
+      price: 349,
+      coverGradient: "from-amber-500 to-orange-600",
     },
-  ];
+  ],
+  subtotal: 398,
+  tax: 75.62,
+  total: 473.62,
+  email: "max@example.de",
+};
 
+export default function CheckoutSuccessPage() {
   return (
-    <div className="min-h-screen pt-20 pb-16 flex items-center justify-center">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-2xl">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="text-center"
-        >
-          {/* Success Icon */}
+    <div className="min-h-screen pt-20 pb-16 bg-background">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-2xl mx-auto text-center">
+          {/* Success Animation */}
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            className="mx-auto w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mb-6"
+            transition={{ type: "spring", duration: 0.6 }}
+            className="mb-8"
           >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
-              className="w-14 h-14 rounded-full bg-green-500/20 flex items-center justify-center"
-            >
-              <Check className="w-8 h-8 text-green-500" />
-            </motion.div>
+            <div className="w-24 h-24 mx-auto rounded-full bg-green-500/20 flex items-center justify-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <CheckCircle2 className="w-14 h-14 text-green-500" />
+              </motion.div>
+            </div>
           </motion.div>
 
-          {/* Heading */}
-          <motion.h1
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="font-serif text-3xl sm:text-4xl mb-4"
           >
-            Zahlung erfolgreich!
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="text-muted-foreground mb-8"
-          >
-            Vielen Dank für deinen Einkauf! Deine Downloads sind jetzt verfügbar.
-          </motion.p>
+            <h1 className="font-serif text-4xl mb-4">
+              Vielen Dank für deinen Kauf!
+            </h1>
+            <p className="text-lg text-muted-foreground mb-2">
+              Deine Bestellung #{order.id} wurde erfolgreich abgeschlossen.
+            </p>
+            <p className="text-muted-foreground">
+              Eine Bestätigung wurde an{" "}
+              <span className="text-foreground">{order.email}</span> gesendet.
+            </p>
+          </motion.div>
 
           {/* Order Details */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="mb-8"
+            transition={{ delay: 0.4 }}
+            className="mt-10"
           >
-            <Card className="bg-card border-border/50 text-left">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm text-muted-foreground">
-                    Bestellnummer
-                  </span>
-                  <span className="font-mono font-medium">#ORD-2024-00123</span>
+            <Card className="bg-card/50 border-border/50 text-left">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Bestellnummer
+                    </p>
+                    <p className="font-medium">{order.id}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground">Datum</p>
+                    <p className="font-medium">{order.date}</p>
+                  </div>
                 </div>
 
-                <div className="space-y-4">
-                  {purchasedItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between p-4 bg-muted/30 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-md bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center">
-                          <Music className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{item.title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {item.artist} • {item.license}
-                          </p>
-                        </div>
+                <Separator className="mb-6" />
+
+                {/* Items */}
+                <div className="space-y-4 mb-6">
+                  {order.items.map((item) => (
+                    <div key={item.id} className="flex items-center gap-4">
+                      <div
+                        className={`w-14 h-14 rounded-lg bg-gradient-to-br ${item.coverGradient} flex-shrink-0`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium">{item.title}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {item.artist}
+                        </p>
+                        <Badge variant="outline" className="text-xs mt-1">
+                          {item.license}
+                        </Badge>
                       </div>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={item.downloadUrl}>
-                          <Download className="w-4 h-4 mr-2" />
-                          Download
-                        </Link>
-                      </Button>
+                      <span className="font-medium">€{item.price}</span>
                     </div>
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between mt-6 pt-4 border-t border-border/50">
-                  <span className="text-sm text-muted-foreground">
-                    Rechnung
-                  </span>
-                  <Button variant="ghost" size="sm">
-                    <FileText className="w-4 h-4 mr-2" />
-                    PDF herunterladen
-                  </Button>
+                <Separator className="mb-6" />
+
+                {/* Totals */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Zwischensumme</span>
+                    <span>€{order.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">MwSt. (19%)</span>
+                    <span>€{order.tax.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-semibold pt-2">
+                    <span>Gesamt</span>
+                    <span className="text-primary">€{order.total.toFixed(2)}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -171,41 +154,90 @@ export default function CheckoutSuccessPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            transition={{ delay: 0.5 }}
+            className="mt-8 space-y-4"
           >
-            <Button asChild className="bg-primary hover:bg-primary/90">
-              <Link href="/dashboard">
-                <Home className="w-4 h-4 mr-2" />
-                Zum Dashboard
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Link href="/downloads">
+                <Button className="w-full h-14 bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow hover:shadow-glow-lg">
+                  <Download className="w-5 h-5 mr-2" />
+                  Musik herunterladen
+                </Button>
               </Link>
-            </Button>
-            <Button variant="outline" asChild>
+              <Link href="/invoices">
+                <Button variant="outline" className="w-full h-14">
+                  <FileText className="w-5 h-5 mr-2" />
+                  Rechnung ansehen
+                </Button>
+              </Link>
+            </div>
+
+            <div className="flex items-center justify-center gap-6 pt-4">
               <Link href="/marketplace">
-                <Music className="w-4 h-4 mr-2" />
-                Weiter shoppen
+                <Button variant="ghost" className="text-muted-foreground">
+                  <Music className="w-4 h-4 mr-2" />
+                  Mehr Musik entdecken
+                </Button>
               </Link>
-            </Button>
+              <Link href="/dashboard">
+                <Button variant="ghost" className="text-muted-foreground">
+                  <Home className="w-4 h-4 mr-2" />
+                  Zum Dashboard
+                </Button>
+              </Link>
+            </div>
           </motion.div>
 
-          {/* Email Notice */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            className="text-sm text-muted-foreground mt-8"
+          {/* What's Next */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="mt-12"
           >
-            Eine Bestätigung wurde an deine E-Mail-Adresse gesendet.
-            <br />
-            Du findest deine Downloads auch jederzeit in deinem{" "}
-            <Link href="/dashboard" className="text-primary hover:underline">
-              Dashboard
-            </Link>
-            .
-          </motion.p>
-        </motion.div>
+            <Card className="bg-secondary/50 border-border/50">
+              <CardContent className="p-6">
+                <h3 className="font-serif text-xl mb-4">Was passiert als Nächstes?</h3>
+                <div className="grid sm:grid-cols-3 gap-6 text-left">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                      1
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">E-Mail erhalten</p>
+                      <p className="text-xs text-muted-foreground">
+                        Bestätigung und Rechnung wurden gesendet
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                      2
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Musik herunterladen</p>
+                      <p className="text-xs text-muted-foreground">
+                        WAV & MP3 Dateien im Download-Center
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                      3
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Lizenz speichern</p>
+                      <p className="text-xs text-muted-foreground">
+                        Lizenzzertifikate für deine Unterlagen
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
       </div>
     </div>
   );
 }
-

@@ -5,18 +5,20 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Download,
-  Search,
-  Music,
   Play,
   Pause,
+  Search,
   FileAudio,
-  FileText,
   Calendar,
-  Filter,
+  Clock,
+  Music,
+  FileText,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -26,308 +28,307 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-// Mock downloads
-const mockDownloads = [
+// Mock downloads data
+const downloads = [
   {
-    id: "1",
+    id: "dl-1",
     title: "Neon Dreams",
-    artist: "Electronic Producer",
-    license: "COMMERCIAL",
-    purchaseDate: "2024-01-05",
-    expiresAt: null,
-    type: "marketplace",
-    downloadCount: 3,
-    formats: ["MP3", "WAV"],
-  },
-  {
-    id: "2",
-    title: "Corporate Success",
     artist: "Max Müller",
-    license: "PERSONAL",
-    purchaseDate: "2024-01-03",
-    expiresAt: null,
+    purchaseDate: "2024-01-22",
+    license: "Commercial",
+    duration: 204,
+    coverGradient: "from-purple-500 to-pink-500",
+    formats: ["WAV", "MP3"],
+    orderId: null,
     type: "marketplace",
-    downloadCount: 1,
-    formats: ["MP3", "WAV"],
   },
   {
-    id: "3",
-    title: "Epic Cinematic Trailer",
+    id: "dl-2",
+    title: "Epic Horizon",
     artist: "Sarah Schmidt",
-    license: "COMMERCIAL",
-    purchaseDate: "2024-01-01",
-    expiresAt: null,
-    type: "custom",
-    downloadCount: 2,
-    formats: ["MP3", "WAV", "STEMS"],
+    purchaseDate: "2024-01-18",
+    license: "Enterprise",
+    duration: 252,
+    coverGradient: "from-amber-500 to-orange-600",
+    formats: ["WAV", "MP3", "STEMS"],
+    orderId: null,
+    type: "marketplace",
   },
   {
-    id: "4",
-    title: "Brand Jingle",
-    artist: "Tom Weber",
-    license: "EXCLUSIVE",
-    purchaseDate: "2023-12-20",
-    expiresAt: null,
+    id: "dl-3",
+    title: "Corporate Video Soundtrack",
+    artist: "Max Müller",
+    purchaseDate: "2024-01-28",
+    license: "Commercial",
+    duration: 168,
+    coverGradient: "from-blue-500 to-cyan-600",
+    formats: ["WAV", "MP3"],
+    orderId: "ORD-2024-003",
     type: "custom",
-    downloadCount: 5,
-    formats: ["MP3", "WAV", "STEMS", "PROJECT"],
+  },
+  {
+    id: "dl-4",
+    title: "Urban Flow",
+    artist: "Tom Weber",
+    purchaseDate: "2024-01-10",
+    license: "Commercial",
+    duration: 178,
+    coverGradient: "from-cyan-500 to-blue-600",
+    formats: ["WAV", "MP3"],
+    orderId: null,
+    type: "marketplace",
+  },
+  {
+    id: "dl-5",
+    title: "YouTube Channel Intro",
+    artist: "Tom Weber",
+    purchaseDate: "2024-01-15",
+    license: "Commercial",
+    duration: 32,
+    coverGradient: "from-rose-500 to-pink-600",
+    formats: ["WAV", "MP3"],
+    orderId: "ORD-2024-001",
+    type: "custom",
   },
 ];
+
+function formatDuration(seconds: number) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+function DownloadCard({ download }: { download: (typeof downloads)[0] }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  return (
+    <Card className="bg-card/50 border-border/50">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-4">
+          {/* Cover with Play Button */}
+          <div
+            className={`relative w-16 h-16 rounded-lg bg-gradient-to-br ${download.coverGradient} flex-shrink-0 group cursor-pointer`}
+            onClick={() => setIsPlaying(!isPlaying)}
+          >
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+              {isPlaying ? (
+                <Pause className="w-6 h-6 text-white" />
+              ) : (
+                <Play className="w-6 h-6 text-white ml-0.5" />
+              )}
+            </div>
+            {isPlaying && (
+              <div className="absolute bottom-1 left-1 flex items-end gap-0.5 h-3">
+                {[...Array(3)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-0.5 bg-white rounded-full animate-equalizer"
+                    style={{ animationDelay: `${i * 0.15}s`, height: "100%" }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold truncate">{download.title}</h3>
+              {download.type === "custom" && (
+                <Badge variant="secondary" className="text-xs">
+                  Custom
+                </Badge>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">{download.artist}</p>
+            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {formatDuration(download.duration)}
+              </span>
+              <Badge variant="outline" className="text-xs h-5">
+                {download.license}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Purchase Date */}
+          <div className="hidden sm:block text-right">
+            <p className="text-xs text-muted-foreground">Gekauft am</p>
+            <p className="text-sm">
+              {new Date(download.purchaseDate).toLocaleDateString("de-DE")}
+            </p>
+          </div>
+
+          {/* Download Actions */}
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" asChild>
+              <Link href={`/invoices?track=${download.id}`}>
+                <FileText className="w-3.5 h-3.5 mr-1" />
+                Lizenz
+              </Link>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                  <Download className="w-3.5 h-3.5 mr-1" />
+                  Download
+                  <ChevronDown className="w-3 h-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {download.formats.map((format) => (
+                  <DropdownMenuItem key={format}>
+                    <FileAudio className="w-4 h-4 mr-2" />
+                    {format} herunterladen
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function DownloadsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [playingId, setPlayingId] = useState<string | null>(null);
 
-  // Filter downloads
-  const filteredDownloads = mockDownloads.filter((download) => {
-    if (typeFilter !== "all" && download.type !== typeFilter) {
-      return false;
-    }
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      if (
-        !download.title.toLowerCase().includes(query) &&
-        !download.artist.toLowerCase().includes(query)
-      ) {
-        return false;
-      }
-    }
-    return true;
+  const filteredDownloads = downloads.filter((download) => {
+    const matchesSearch =
+      download.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      download.artist.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType =
+      typeFilter === "all" || download.type === typeFilter;
+    return matchesSearch && matchesType;
   });
 
+  const marketplaceCount = downloads.filter((d) => d.type === "marketplace").length;
+  const customCount = downloads.filter((d) => d.type === "custom").length;
+
   return (
-    <div className="min-h-screen pt-20 pb-16">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen pt-20 pb-16 bg-background">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="font-serif text-3xl sm:text-4xl mb-2">Meine Downloads</h1>
-          <p className="text-muted-foreground">
-            Alle deine erworbenen Tracks an einem Ort
-          </p>
-        </div>
-
-        {/* Stats */}
-        <div className="grid sm:grid-cols-3 gap-4 mb-8">
-          <Card className="bg-card border-border/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Music className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-serif">{mockDownloads.length}</p>
-                <p className="text-sm text-muted-foreground">Tracks erworben</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-card border-border/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                <Download className="w-6 h-6 text-green-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-serif">
-                  {mockDownloads.reduce((sum, d) => sum + d.downloadCount, 0)}
-                </p>
-                <p className="text-sm text-muted-foreground">Downloads gesamt</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-card border-border/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <FileText className="w-6 h-6 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-serif">
-                  {mockDownloads.filter((d) => d.type === "custom").length}
-                </p>
-                <p className="text-sm text-muted-foreground">Custom Projekte</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <Card className="bg-card border-border/50 mb-6">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <div className="relative flex-1 w-full sm:max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Downloads suchen..."
-                  className="pl-9"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Typ" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Alle</SelectItem>
-                  <SelectItem value="marketplace">Marktplatz</SelectItem>
-                  <SelectItem value="custom">Custom Music</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Downloads Table */}
-        <Card className="bg-card border-border/50">
-          <CardContent className="p-0">
-            {filteredDownloads.length === 0 ? (
-              <div className="py-16 text-center">
-                <Download className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
-                <h3 className="text-lg font-medium mb-2">Keine Downloads gefunden</h3>
-                <p className="text-muted-foreground mb-4">
-                  {mockDownloads.length === 0
-                    ? "Du hast noch keine Tracks erworben"
-                    : "Versuche andere Filter"}
-                </p>
-                {mockDownloads.length === 0 && (
-                  <Link href="/marketplace">
-                    <Button>
-                      <Music className="w-4 h-4 mr-2" />
-                      Musik entdecken
-                    </Button>
-                  </Link>
-                )}
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12"></TableHead>
-                    <TableHead>Track</TableHead>
-                    <TableHead>Lizenz</TableHead>
-                    <TableHead>Typ</TableHead>
-                    <TableHead>Kaufdatum</TableHead>
-                    <TableHead className="text-right">Aktionen</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDownloads.map((download, index) => {
-                    const isPlaying = playingId === download.id;
-
-                    return (
-                      <motion.tr
-                        key={download.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                      >
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="w-8 h-8"
-                            onClick={() => setPlayingId(isPlaying ? null : download.id)}
-                          >
-                            {isPlaying ? (
-                              <Pause className="w-4 h-4" />
-                            ) : (
-                              <Play className="w-4 h-4" />
-                            )}
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{download.title}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {download.artist}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="secondary"
-                            className={
-                              download.license === "EXCLUSIVE"
-                                ? "license-exclusive"
-                                : download.license === "COMMERCIAL"
-                                ? "license-commercial"
-                                : "license-personal"
-                            }
-                          >
-                            {download.license}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {download.type === "custom" ? "Custom" : "Marktplatz"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            {new Date(download.purchaseDate).toLocaleDateString("de-DE")}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {download.formats.map((format) => (
-                              <Button
-                                key={format}
-                                variant="outline"
-                                size="sm"
-                                className="text-xs"
-                              >
-                                <FileAudio className="w-3 h-3 mr-1" />
-                                {format}
-                              </Button>
-                            ))}
-                          </div>
-                        </TableCell>
-                      </motion.tr>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Info Box */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mt-8"
+          className="mb-8"
         >
-          <Card className="bg-primary/5 border-primary/10">
-            <CardContent className="p-6">
-              <h3 className="font-medium mb-2">
-                Download-Hinweise
-              </h3>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Downloads sind unbegrenzt verfügbar</li>
-                <li>• WAV-Dateien für professionelle Produktionen empfohlen</li>
-                <li>• STEMS enthalten separate Spuren für weitere Bearbeitung</li>
-                <li>
-                  • Lizenzurkunden findest du unter{" "}
-                  <Link href="/invoices" className="text-primary hover:underline">
-                    Rechnungen
-                  </Link>
-                </li>
-              </ul>
+          <h1 className="font-serif text-4xl mb-2">Downloads</h1>
+          <p className="text-muted-foreground">
+            {downloads.length} Tracks verfügbar · {marketplaceCount} Marktplatz,{" "}
+            {customCount} Custom Music
+          </p>
+        </motion.div>
+
+        {/* Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid sm:grid-cols-3 gap-4 mb-8"
+        >
+          <Card className="bg-card/50 border-border/50">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
+                <Music className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-serif">{downloads.length}</p>
+                <p className="text-sm text-muted-foreground">Gekaufte Tracks</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card/50 border-border/50">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg bg-green-500/20 flex items-center justify-center">
+                <Check className="w-6 h-6 text-green-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-serif">{marketplaceCount}</p>
+                <p className="text-sm text-muted-foreground">Marktplatz-Käufe</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card/50 border-border/50">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                <FileAudio className="w-6 h-6 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-serif">{customCount}</p>
+                <p className="text-sm text-muted-foreground">Custom Music</p>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Filters */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="flex flex-col sm:flex-row gap-4 mb-6"
+        >
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Suche nach Titel oder Künstler..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-card/50"
+            />
+          </div>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Alle Typen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Typen</SelectItem>
+              <SelectItem value="marketplace">Marktplatz</SelectItem>
+              <SelectItem value="custom">Custom Music</SelectItem>
+            </SelectContent>
+          </Select>
+        </motion.div>
+
+        {/* Downloads List */}
+        <div className="space-y-4">
+          {filteredDownloads.length === 0 ? (
+            <Card className="bg-card/50 border-border/50">
+              <CardContent className="py-16 text-center">
+                <Download className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
+                <h3 className="text-lg font-medium mb-2">Keine Downloads gefunden</h3>
+                <p className="text-muted-foreground mb-4">
+                  Kaufe Musik im Marktplatz oder beauftrage Custom Music.
+                </p>
+                <Link href="/marketplace">
+                  <Button>Musik entdecken</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredDownloads.map((download, index) => (
+              <motion.div
+                key={download.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 + index * 0.05 }}
+              >
+                <DownloadCard download={download} />
+              </motion.div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
 }
-

@@ -4,25 +4,22 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
+  Package,
+  Clock,
+  ChevronRight,
   Search,
   Filter,
-  Clock,
-  MessageSquare,
-  ChevronRight,
-  AlertCircle,
-  CheckCircle2,
-  XCircle,
-  Timer,
-  DollarSign,
   Music,
-  Plus,
+  MessageSquare,
+  Calendar,
+  Euro,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -31,130 +28,207 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Mock orders
-const mockOrders = [
+// Mock orders data
+const orders = [
   {
-    id: "ord1",
-    title: "Epic Cinematic Trailer",
-    director: { name: "Sarah Schmidt", initials: "SS" },
+    id: "ORD-2024-003",
+    title: "Corporate Video Soundtrack",
+    description: "Energetischer Soundtrack für Unternehmensvideo, 2-3 Minuten",
     status: "IN_PROGRESS",
-    budget: 450,
-    deadline: "2024-01-15",
-    daysLeft: 12,
-    unreadMessages: 2,
-    createdAt: "2024-01-01",
-    genre: "Cinematic",
+    director: {
+      id: "dir1",
+      name: "Max Müller",
+      avatar: "from-violet-500 to-purple-600",
+    },
+    price: 450,
+    createdAt: "2024-01-20",
+    deadline: "2024-02-05",
+    progress: 60,
+    revisions: { used: 1, total: 3 },
+    messages: 8,
   },
   {
-    id: "ord2",
-    title: "Corporate Brand Jingle",
-    director: { name: "Max Müller", initials: "MM" },
-    status: "OFFER_PENDING",
-    budget: 300,
-    deadline: null,
-    daysLeft: null,
-    unreadMessages: 1,
-    createdAt: "2024-01-03",
-    genre: "Corporate",
+    id: "ORD-2024-002",
+    title: "Podcast Intro Music",
+    description: "Kurzes, einprägsames Intro für Tech-Podcast",
+    status: "REVISION_REQUESTED",
+    director: {
+      id: "dir2",
+      name: "Sarah Schmidt",
+      avatar: "from-amber-500 to-yellow-500",
+    },
+    price: 280,
+    createdAt: "2024-01-15",
+    deadline: "2024-01-30",
+    progress: 80,
+    revisions: { used: 2, total: 3 },
+    messages: 12,
   },
   {
-    id: "ord3",
-    title: "Meditation Music Pack",
-    director: { name: "Lisa Braun", initials: "LB" },
-    status: "READY_FOR_PAYMENT",
-    budget: 600,
-    deadline: "2024-01-20",
-    daysLeft: 0,
-    unreadMessages: 0,
-    createdAt: "2024-01-02",
-    genre: "Ambient",
-  },
-  {
-    id: "ord4",
-    title: "Podcast Intro/Outro",
-    director: { name: "Tom Weber", initials: "TW" },
+    id: "ORD-2024-001",
+    title: "YouTube Channel Intro",
+    description: "Modernes Intro für Gaming YouTube Kanal",
     status: "COMPLETED",
-    budget: 150,
-    deadline: "2024-01-05",
-    daysLeft: null,
-    unreadMessages: 0,
-    createdAt: "2023-12-20",
-    genre: "Pop",
+    director: {
+      id: "dir3",
+      name: "Tom Weber",
+      avatar: "from-cyan-500 to-teal-500",
+    },
+    price: 180,
+    createdAt: "2024-01-05",
+    deadline: "2024-01-15",
+    progress: 100,
+    revisions: { used: 1, total: 2 },
+    messages: 6,
+  },
+  {
+    id: "ORD-2023-015",
+    title: "Wedding Video Music",
+    description: "Romantischer Soundtrack für Hochzeitsvideo",
+    status: "COMPLETED",
+    director: {
+      id: "dir4",
+      name: "Lisa Braun",
+      avatar: "from-rose-500 to-orange-400",
+    },
+    price: 320,
+    createdAt: "2023-12-10",
+    deadline: "2023-12-28",
+    progress: 100,
+    revisions: { used: 0, total: 2 },
+    messages: 4,
+  },
+  {
+    id: "ORD-2024-004",
+    title: "App Notification Sounds",
+    description: "Set von 5 kurzen Notification Sounds für Mobile App",
+    status: "PENDING",
+    director: {
+      id: "dir6",
+      name: "Nina Hofmann",
+      avatar: "from-emerald-500 to-teal-600",
+    },
+    price: 150,
+    createdAt: "2024-01-22",
+    deadline: null,
+    progress: 0,
+    revisions: { used: 0, total: 2 },
+    messages: 2,
   },
 ];
 
-const statusConfig = {
-  PENDING: { label: "Ausstehend", color: "status-pending", icon: Clock },
-  OFFER_PENDING: { label: "Angebot ausstehend", color: "status-pending", icon: Timer },
-  OFFER_ACCEPTED: { label: "Angebot akzeptiert", color: "status-in-progress", icon: CheckCircle2 },
-  IN_PROGRESS: { label: "In Bearbeitung", color: "status-in-progress", icon: Music },
-  REVISION_REQUESTED: { label: "Revision angefragt", color: "status-revision", icon: AlertCircle },
-  READY_FOR_PAYMENT: { label: "Bereit zur Zahlung", color: "status-ready", icon: DollarSign },
-  PAID: { label: "Bezahlt", color: "status-paid", icon: CheckCircle2 },
-  COMPLETED: { label: "Abgeschlossen", color: "status-completed", icon: CheckCircle2 },
-  CANCELLED: { label: "Storniert", color: "status-cancelled", icon: XCircle },
-  DISPUTED: { label: "Streitfall", color: "status-disputed", icon: AlertCircle },
+const statusConfig: Record<
+  string,
+  { label: string; color: string; bgColor: string }
+> = {
+  PENDING: {
+    label: "Wartet auf Angebot",
+    color: "text-yellow-500",
+    bgColor: "bg-yellow-500/20",
+  },
+  OFFER_PENDING: {
+    label: "Angebot erhalten",
+    color: "text-blue-500",
+    bgColor: "bg-blue-500/20",
+  },
+  OFFER_ACCEPTED: {
+    label: "Angenommen",
+    color: "text-green-500",
+    bgColor: "bg-green-500/20",
+  },
+  IN_PROGRESS: {
+    label: "In Bearbeitung",
+    color: "text-blue-500",
+    bgColor: "bg-blue-500/20",
+  },
+  REVISION_REQUESTED: {
+    label: "Revision angefragt",
+    color: "text-orange-500",
+    bgColor: "bg-orange-500/20",
+  },
+  READY_FOR_PAYMENT: {
+    label: "Bereit zur Zahlung",
+    color: "text-purple-500",
+    bgColor: "bg-purple-500/20",
+  },
+  COMPLETED: {
+    label: "Abgeschlossen",
+    color: "text-green-500",
+    bgColor: "bg-green-500/20",
+  },
+  CANCELLED: {
+    label: "Storniert",
+    color: "text-red-500",
+    bgColor: "bg-red-500/20",
+  },
 };
 
-function OrderCard({ order }: { order: (typeof mockOrders)[0] }) {
-  const status = statusConfig[order.status as keyof typeof statusConfig];
-  const StatusIcon = status.icon;
+function OrderCard({ order }: { order: (typeof orders)[0] }) {
+  const status = statusConfig[order.status];
 
   return (
     <Link href={`/orders/${order.id}`}>
-      <Card className="bg-card border-border/50 hover:border-border transition-all card-hover">
+      <Card className="bg-card/50 border-border/50 hover:border-border transition-colors cursor-pointer">
         <CardContent className="p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-4">
-              <Avatar className="w-12 h-12">
-                <AvatarFallback className="bg-gradient-to-br from-primary/30 to-secondary/30">
-                  {order.director.initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold truncate">{order.title}</h3>
-                  {order.unreadMessages > 0 && (
-                    <Badge variant="destructive" className="text-xs">
-                      {order.unreadMessages}
-                    </Badge>
-                  )}
+          <div className="flex items-start gap-4">
+            {/* Director Avatar */}
+            <div
+              className={`w-12 h-12 rounded-lg bg-gradient-to-br ${order.director.avatar} flex items-center justify-center text-white font-serif flex-shrink-0`}
+            >
+              {order.director.name.charAt(0)}
+            </div>
+
+            {/* Order Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-4 mb-2">
+                <div>
+                  <h3 className="font-semibold">{order.title}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {order.director.name} · {order.id}
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {order.director.name} • {order.genre}
-                </p>
+                <Badge className={`${status.bgColor} ${status.color} border-0`}>
+                  {status.label}
+                </Badge>
+              </div>
+
+              <p className="text-sm text-muted-foreground mb-4 line-clamp-1">
+                {order.description}
+              </p>
+
+              {/* Progress Bar (for active orders) */}
+              {order.status !== "COMPLETED" &&
+                order.status !== "PENDING" &&
+                order.status !== "CANCELLED" && (
+                  <div className="mb-4">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-muted-foreground">Fortschritt</span>
+                      <span>{order.progress}%</span>
+                    </div>
+                    <Progress value={order.progress} className="h-2" />
+                  </div>
+                )}
+
+              {/* Meta Info */}
+              <div className="flex items-center gap-4 text-sm">
+                <span className="flex items-center gap-1 text-muted-foreground">
+                  <Calendar className="w-3.5 h-3.5" />
+                  {new Date(order.createdAt).toLocaleDateString("de-DE")}
+                </span>
+                <span className="flex items-center gap-1 text-muted-foreground">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  {order.messages}
+                </span>
+                <span className="flex items-center gap-1 text-muted-foreground">
+                  Revisionen: {order.revisions.used}/{order.revisions.total}
+                </span>
+                <span className="font-medium text-primary ml-auto">
+                  €{order.price}
+                </span>
               </div>
             </div>
 
-            <div className="text-right flex flex-col items-end gap-2">
-              <Badge className={status.color}>
-                <StatusIcon className="w-3 h-3 mr-1" />
-                {status.label}
-              </Badge>
-              <p className="text-lg font-serif">€{order.budget}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/50">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Clock className="w-4 h-4" />
-                {new Date(order.createdAt).toLocaleDateString("de-DE")}
-              </span>
-              {order.deadline && (
-                <span className="flex items-center gap-1">
-                  <Timer className="w-4 h-4" />
-                  Fällig: {new Date(order.deadline).toLocaleDateString("de-DE")}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm">
-                <MessageSquare className="w-4 h-4 mr-1" />
-                Chat
-              </Button>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
           </div>
         </CardContent>
       </Card>
@@ -162,181 +236,154 @@ function OrderCard({ order }: { order: (typeof mockOrders)[0] }) {
   );
 }
 
-export default function CustomerOrdersPage() {
+export default function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [currentTab, setCurrentTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("active");
 
-  const filteredOrders = mockOrders.filter((order) => {
-    if (currentTab === "active") {
-      if (!["IN_PROGRESS", "REVISION_REQUESTED", "OFFER_PENDING", "OFFER_ACCEPTED", "READY_FOR_PAYMENT"].includes(order.status)) {
-        return false;
-      }
-    } else if (currentTab === "completed") {
-      if (!["COMPLETED", "PAID"].includes(order.status)) {
-        return false;
-      }
-    }
+  const activeOrders = orders.filter(
+    (o) =>
+      o.status !== "COMPLETED" &&
+      o.status !== "CANCELLED"
+  );
+  const completedOrders = orders.filter(
+    (o) => o.status === "COMPLETED" || o.status === "CANCELLED"
+  );
 
-    if (statusFilter !== "all" && order.status !== statusFilter) {
-      return false;
-    }
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      if (
-        !order.title.toLowerCase().includes(query) &&
-        !order.director.name.toLowerCase().includes(query)
-      ) {
-        return false;
-      }
-    }
-
-    return true;
+  const filteredOrders = (
+    activeTab === "active" ? activeOrders : completedOrders
+  ).filter((order) => {
+    const matchesSearch =
+      order.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || order.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
-  const activeOrders = mockOrders.filter((o) =>
-    ["IN_PROGRESS", "REVISION_REQUESTED", "OFFER_PENDING", "READY_FOR_PAYMENT"].includes(o.status)
-  ).length;
-  const totalUnread = mockOrders.reduce((sum, o) => sum + o.unreadMessages, 0);
-
   return (
-    <div className="min-h-screen pt-20 pb-16">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen pt-20 pb-16 bg-background">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8"
+        >
           <div>
-            <h1 className="font-serif text-3xl sm:text-4xl mb-2">Meine Aufträge</h1>
+            <h1 className="font-serif text-4xl mb-2">Meine Aufträge</h1>
             <p className="text-muted-foreground">
-              Verfolge deine Custom Music Aufträge
+              {activeOrders.length} aktive Aufträge, {completedOrders.length}{" "}
+              abgeschlossen
             </p>
           </div>
           <Link href="/custom-music">
-            <Button className="bg-primary hover:bg-primary/90">
-              <Plus className="w-4 h-4 mr-2" />
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <Package className="w-4 h-4 mr-2" />
               Neuer Auftrag
             </Button>
           </Link>
-        </div>
-
-        {/* Stats */}
-        <div className="grid sm:grid-cols-3 gap-4 mb-8">
-          <Card className="bg-card border-border/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Music className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-serif">{activeOrders}</p>
-                <p className="text-sm text-muted-foreground">Aktive Aufträge</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-card border-border/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                <CheckCircle2 className="w-6 h-6 text-green-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-serif">
-                  {mockOrders.filter((o) => o.status === "COMPLETED").length}
-                </p>
-                <p className="text-sm text-muted-foreground">Abgeschlossen</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-card border-border/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <MessageSquare className="w-6 h-6 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-serif">{totalUnread}</p>
-                <p className="text-sm text-muted-foreground">Neue Nachrichten</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        </motion.div>
 
         {/* Filters */}
-        <Card className="bg-card border-border/50 mb-6">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <Tabs value={currentTab} onValueChange={setCurrentTab}>
-                <TabsList>
-                  <TabsTrigger value="all">Alle</TabsTrigger>
-                  <TabsTrigger value="active">Aktiv</TabsTrigger>
-                  <TabsTrigger value="completed">Abgeschlossen</TabsTrigger>
-                </TabsList>
-              </Tabs>
-
-              <div className="flex items-center gap-3 w-full sm:w-auto">
-                <div className="relative flex-1 sm:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Suchen..."
-                    className="pl-9"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <Filter className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Alle Status</SelectItem>
-                    {Object.entries(statusConfig).map(([key, { label }]) => (
-                      <SelectItem key={key} value={key}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Orders List */}
-        {filteredOrders.length === 0 ? (
-          <Card className="bg-card border-border/50">
-            <CardContent className="py-16 text-center">
-              <Music className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
-              <h3 className="text-lg font-medium mb-2">Keine Aufträge gefunden</h3>
-              <p className="text-muted-foreground mb-4">
-                {mockOrders.length === 0
-                  ? "Du hast noch keine Aufträge erstellt"
-                  : "Versuche andere Filter"}
-              </p>
-              {mockOrders.length === 0 && (
-                <Link href="/custom-music">
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Ersten Auftrag erstellen
-                  </Button>
-                </Link>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {filteredOrders.map((order, index) => (
-              <motion.div
-                key={order.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <OrderCard order={order} />
-              </motion.div>
-            ))}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="flex flex-col sm:flex-row gap-4 mb-6"
+        >
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Suche nach Titel oder Auftragsnummer..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-card/50"
+            />
           </div>
-        )}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Status filtern" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Status</SelectItem>
+              <SelectItem value="PENDING">Wartet auf Angebot</SelectItem>
+              <SelectItem value="IN_PROGRESS">In Bearbeitung</SelectItem>
+              <SelectItem value="REVISION_REQUESTED">Revision</SelectItem>
+              <SelectItem value="READY_FOR_PAYMENT">Bereit zur Zahlung</SelectItem>
+            </SelectContent>
+          </Select>
+        </motion.div>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="mb-6 bg-card/50">
+            <TabsTrigger value="active">
+              Aktiv ({activeOrders.length})
+            </TabsTrigger>
+            <TabsTrigger value="completed">
+              Abgeschlossen ({completedOrders.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="active" className="space-y-4">
+            {filteredOrders.length === 0 ? (
+              <Card className="bg-card/50 border-border/50">
+                <CardContent className="py-16 text-center">
+                  <Package className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
+                  <h3 className="text-lg font-medium mb-2">
+                    Keine aktiven Aufträge
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    Erstelle einen neuen Auftrag für maßgeschneiderte Musik.
+                  </p>
+                  <Link href="/custom-music">
+                    <Button>Neuen Auftrag erstellen</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ) : (
+              filteredOrders.map((order, index) => (
+                <motion.div
+                  key={order.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <OrderCard order={order} />
+                </motion.div>
+              ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="completed" className="space-y-4">
+            {filteredOrders.length === 0 ? (
+              <Card className="bg-card/50 border-border/50">
+                <CardContent className="py-16 text-center">
+                  <Package className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
+                  <h3 className="text-lg font-medium mb-2">
+                    Keine abgeschlossenen Aufträge
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Abgeschlossene Aufträge werden hier angezeigt.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              filteredOrders.map((order, index) => (
+                <motion.div
+                  key={order.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <OrderCard order={order} />
+                </motion.div>
+              ))
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
 }
-

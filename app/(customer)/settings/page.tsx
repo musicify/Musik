@@ -5,23 +5,25 @@ import { motion } from "framer-motion";
 import {
   User,
   Mail,
-  Bell,
   Lock,
+  Bell,
   CreditCard,
+  Shield,
   Globe,
   Palette,
-  Save,
-  Upload,
   Trash2,
+  Save,
+  Check,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
@@ -30,121 +32,189 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+// Mock user data
+const user = {
+  name: "Max Mustermann",
+  email: "max@example.de",
+  company: "Musterfirma GmbH",
+  avatar: null,
+  memberSince: "Januar 2024",
+};
 
 export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState("profile");
+  const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Notification settings
+  const [notifications, setNotifications] = useState({
+    email: true,
+    orderUpdates: true,
+    marketing: false,
+    newMusic: true,
+  });
 
   const handleSave = async () => {
     setIsSaving(true);
+    // Simulate save
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsSaving(false);
   };
 
   return (
-    <div className="min-h-screen pt-20 pb-16">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
+    <div className="min-h-screen pt-20 pb-16 bg-background">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="font-serif text-3xl sm:text-4xl mb-2">Einstellungen</h1>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="font-serif text-4xl mb-2">Einstellungen</h1>
           <p className="text-muted-foreground">
-            Verwalte dein Konto und Präferenzen
+            Verwalte dein Konto und deine Präferenzen
           </p>
-        </div>
+        </motion.div>
 
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid grid-cols-2 lg:grid-cols-5 gap-2 h-auto p-1">
-            <TabsTrigger value="profile" className="gap-2">
-              <User className="w-4 h-4" />
-              <span className="hidden sm:inline">Profil</span>
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="gap-2">
-              <Bell className="w-4 h-4" />
-              <span className="hidden sm:inline">Benachrichtigungen</span>
-            </TabsTrigger>
-            <TabsTrigger value="security" className="gap-2">
-              <Lock className="w-4 h-4" />
-              <span className="hidden sm:inline">Sicherheit</span>
-            </TabsTrigger>
-            <TabsTrigger value="billing" className="gap-2">
-              <CreditCard className="w-4 h-4" />
-              <span className="hidden sm:inline">Zahlung</span>
-            </TabsTrigger>
-            <TabsTrigger value="preferences" className="gap-2">
-              <Palette className="w-4 h-4" />
-              <span className="hidden sm:inline">Präferenzen</span>
-            </TabsTrigger>
-          </TabsList>
+        <div className="grid lg:grid-cols-[250px,1fr] gap-8">
+          {/* Sidebar Navigation */}
+          <motion.aside
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="hidden lg:block"
+          >
+            <Card className="bg-card/50 border-border/50 sticky top-24">
+              <CardContent className="p-4">
+                <nav className="space-y-1">
+                  {[
+                    { id: "profile", label: "Profil", icon: User },
+                    { id: "notifications", label: "Benachrichtigungen", icon: Bell },
+                    { id: "security", label: "Sicherheit", icon: Lock },
+                    { id: "billing", label: "Zahlungen", icon: CreditCard },
+                    { id: "preferences", label: "Präferenzen", icon: Palette },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                        activeTab === item.id
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      {item.label}
+                    </button>
+                  ))}
+                </nav>
+              </CardContent>
+            </Card>
+          </motion.aside>
 
-          {/* Profile Tab */}
-          <TabsContent value="profile">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
+          {/* Main Content */}
+          <motion.main
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            {/* Mobile Tabs */}
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="lg:hidden mb-6"
             >
-              <Card className="bg-card border-border/50">
-                <CardHeader>
-                  <CardTitle>Profil-Informationen</CardTitle>
-                  <CardDescription>
-                    Aktualisiere deine persönlichen Daten
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Avatar */}
-                  <div className="flex items-center gap-6">
-                    <Avatar className="w-20 h-20">
-                      <AvatarFallback className="bg-gradient-to-br from-primary/30 to-secondary/30 text-2xl font-serif">
-                        M
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="space-y-2">
-                      <Button variant="outline" size="sm">
-                        <Upload className="w-4 h-4 mr-2" />
-                        Bild hochladen
-                      </Button>
-                      <p className="text-xs text-muted-foreground">
-                        JPG, PNG oder WebP. Max 5MB.
-                      </p>
+              <TabsList className="w-full grid grid-cols-5 bg-card/50">
+                <TabsTrigger value="profile" className="text-xs">Profil</TabsTrigger>
+                <TabsTrigger value="notifications" className="text-xs">Benachrichtigungen</TabsTrigger>
+                <TabsTrigger value="security" className="text-xs">Sicherheit</TabsTrigger>
+                <TabsTrigger value="billing" className="text-xs">Zahlungen</TabsTrigger>
+                <TabsTrigger value="preferences" className="text-xs">Präferenzen</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {/* Profile Tab */}
+            {activeTab === "profile" && (
+              <div className="space-y-6">
+                <Card className="bg-card/50 border-border/50">
+                  <CardHeader>
+                    <CardTitle>Profil</CardTitle>
+                    <CardDescription>
+                      Deine persönlichen Informationen
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Avatar */}
+                    <div className="flex items-center gap-6">
+                      <Avatar className="w-20 h-20">
+                        <AvatarImage src={user.avatar || undefined} />
+                        <AvatarFallback className="bg-primary/10 text-primary text-2xl font-serif">
+                          {user.name.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <Button variant="outline" size="sm">
+                          Bild ändern
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          JPG, PNG oder GIF. Max 2MB.
+                        </p>
+                      </div>
                     </div>
-                  </div>
 
-                  <Separator />
+                    <Separator />
 
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="firstName">Vorname</Label>
-                      <Input id="firstName" defaultValue="Max" />
+                    {/* Form Fields */}
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="name">Name</Label>
+                        <Input
+                          id="name"
+                          defaultValue={user.name}
+                          className="mt-1 bg-background"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="email">E-Mail</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          defaultValue={user.email}
+                          className="mt-1 bg-background"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <Label htmlFor="company">Firma (optional)</Label>
+                        <Input
+                          id="company"
+                          defaultValue={user.company}
+                          className="mt-1 bg-background"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="lastName">Nachname</Label>
-                      <Input id="lastName" defaultValue="Mustermann" />
-                    </div>
-                  </div>
+                  </CardContent>
+                </Card>
 
-                  <div>
-                    <Label htmlFor="email">E-Mail</Label>
-                    <Input id="email" type="email" defaultValue="max@example.com" />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="bio">Bio</Label>
-                    <Textarea
-                      id="bio"
-                      placeholder="Erzähle etwas über dich..."
-                      rows={4}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="company">Firma (optional)</Label>
-                    <Input id="company" placeholder="Firma GmbH" />
-                  </div>
-
-                  <Button onClick={handleSave} disabled={isSaving}>
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
                     {isSaving ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                        <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
                         Speichern...
                       </>
                     ) : (
@@ -154,315 +224,306 @@ export default function SettingsPage() {
                       </>
                     )}
                   </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </TabsContent>
+                </div>
+              </div>
+            )}
 
-          {/* Notifications Tab */}
-          <TabsContent value="notifications">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <Card className="bg-card border-border/50">
+            {/* Notifications Tab */}
+            {activeTab === "notifications" && (
+              <Card className="bg-card/50 border-border/50">
                 <CardHeader>
                   <CardTitle>Benachrichtigungen</CardTitle>
                   <CardDescription>
-                    Wähle wie du benachrichtigt werden möchtest
+                    Entscheide, welche Benachrichtigungen du erhalten möchtest
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                  {[
+                    {
+                      id: "email",
+                      label: "E-Mail-Benachrichtigungen",
+                      description: "Erhalte wichtige Updates per E-Mail",
+                    },
+                    {
+                      id: "orderUpdates",
+                      label: "Auftrags-Updates",
+                      description: "Benachrichtigungen zu deinen laufenden Aufträgen",
+                    },
+                    {
+                      id: "newMusic",
+                      label: "Neue Musik",
+                      description: "Erfahre von neuen Tracks deiner Lieblingskünstler",
+                    },
+                    {
+                      id: "marketing",
+                      label: "Marketing",
+                      description: "Angebote, Rabatte und Newsletter",
+                    },
+                  ].map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between"
+                    >
                       <div>
-                        <p className="font-medium">E-Mail-Benachrichtigungen</p>
+                        <p className="font-medium">{item.label}</p>
                         <p className="text-sm text-muted-foreground">
-                          Erhalte Updates per E-Mail
+                          {item.description}
                         </p>
                       </div>
-                      <Switch defaultChecked />
+                      <Switch
+                        checked={notifications[item.id as keyof typeof notifications]}
+                        onCheckedChange={(checked) =>
+                          setNotifications((prev) => ({
+                            ...prev,
+                            [item.id]: checked,
+                          }))
+                        }
+                      />
                     </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
 
-                    <Separator />
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Auftrags-Updates</p>
-                        <p className="text-sm text-muted-foreground">
-                          Status-Änderungen deiner Aufträge
-                        </p>
+            {/* Security Tab */}
+            {activeTab === "security" && (
+              <div className="space-y-6">
+                <Card className="bg-card/50 border-border/50">
+                  <CardHeader>
+                    <CardTitle>Passwort ändern</CardTitle>
+                    <CardDescription>
+                      Aktualisiere dein Passwort regelmäßig für mehr Sicherheit
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="currentPassword">Aktuelles Passwort</Label>
+                      <div className="relative mt-1">
+                        <Input
+                          id="currentPassword"
+                          type={showPassword ? "text" : "password"}
+                          className="bg-background pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
                       </div>
-                      <Switch defaultChecked />
                     </div>
+                    <div>
+                      <Label htmlFor="newPassword">Neues Passwort</Label>
+                      <Input
+                        id="newPassword"
+                        type="password"
+                        className="mt-1 bg-background"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        className="mt-1 bg-background"
+                      />
+                    </div>
+                    <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+                      Passwort ändern
+                    </Button>
+                  </CardContent>
+                </Card>
 
+                <Card className="bg-card/50 border-border/50">
+                  <CardHeader>
+                    <CardTitle>Zwei-Faktor-Authentifizierung</CardTitle>
+                    <CardDescription>
+                      Füge eine zusätzliche Sicherheitsebene hinzu
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium">Chat-Nachrichten</p>
+                        <p className="font-medium">2FA aktivieren</p>
                         <p className="text-sm text-muted-foreground">
-                          Neue Nachrichten von Komponisten
-                        </p>
-                      </div>
-                      <Switch defaultChecked />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Marketing</p>
-                        <p className="text-sm text-muted-foreground">
-                          News, Angebote und Updates
+                          Schütze dein Konto mit einer Authenticator-App
                         </p>
                       </div>
                       <Switch />
                     </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
-                    <Separator />
+            {/* Billing Tab */}
+            {activeTab === "billing" && (
+              <div className="space-y-6">
+                <Card className="bg-card/50 border-border/50">
+                  <CardHeader>
+                    <CardTitle>Zahlungsmethoden</CardTitle>
+                    <CardDescription>
+                      Verwalte deine gespeicherten Zahlungsmethoden
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-8 bg-secondary rounded flex items-center justify-center text-xs font-bold">
+                          VISA
+                        </div>
+                        <div>
+                          <p className="font-medium">•••• •••• •••• 4242</p>
+                          <p className="text-sm text-muted-foreground">
+                            Läuft ab 12/25
+                          </p>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="sm">
+                        Entfernen
+                      </Button>
+                    </div>
+                    <Button variant="outline">
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Zahlungsmethode hinzufügen
+                    </Button>
+                  </CardContent>
+                </Card>
 
+                <Card className="bg-card/50 border-border/50">
+                  <CardHeader>
+                    <CardTitle>Rechnungsadresse</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="sm:col-span-2">
+                        <Label>Straße & Hausnummer</Label>
+                        <Input
+                          defaultValue="Musterstraße 123"
+                          className="mt-1 bg-background"
+                        />
+                      </div>
+                      <div>
+                        <Label>PLZ</Label>
+                        <Input defaultValue="12345" className="mt-1 bg-background" />
+                      </div>
+                      <div>
+                        <Label>Stadt</Label>
+                        <Input defaultValue="Berlin" className="mt-1 bg-background" />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <Label>Land</Label>
+                        <Input
+                          defaultValue="Deutschland"
+                          className="mt-1 bg-background"
+                        />
+                      </div>
+                    </div>
+                    <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+                      <Save className="w-4 h-4 mr-2" />
+                      Adresse speichern
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Preferences Tab */}
+            {activeTab === "preferences" && (
+              <div className="space-y-6">
+                <Card className="bg-card/50 border-border/50">
+                  <CardHeader>
+                    <CardTitle>Darstellung</CardTitle>
+                    <CardDescription>
+                      Passe das Erscheinungsbild der Plattform an
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium">Push-Benachrichtigungen</p>
+                        <p className="font-medium">Design</p>
                         <p className="text-sm text-muted-foreground">
-                          Browser-Benachrichtigungen
+                          Wähle zwischen Hell und Dunkel
                         </p>
                       </div>
-                      <Switch />
+                      <Select defaultValue="dark">
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="light">Hell</SelectItem>
+                          <SelectItem value="dark">Dunkel</SelectItem>
+                          <SelectItem value="system">System</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </div>
-
-                  <Button onClick={handleSave} disabled={isSaving}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Speichern
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </TabsContent>
-
-          {/* Security Tab */}
-          <TabsContent value="security">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
-            >
-              <Card className="bg-card border-border/50">
-                <CardHeader>
-                  <CardTitle>Passwort ändern</CardTitle>
-                  <CardDescription>
-                    Aktualisiere dein Passwort regelmäßig
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="currentPassword">Aktuelles Passwort</Label>
-                    <Input id="currentPassword" type="password" />
-                  </div>
-                  <div>
-                    <Label htmlFor="newPassword">Neues Passwort</Label>
-                    <Input id="newPassword" type="password" />
-                  </div>
-                  <div>
-                    <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
-                    <Input id="confirmPassword" type="password" />
-                  </div>
-                  <Button>Passwort ändern</Button>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border/50">
-                <CardHeader>
-                  <CardTitle>Zwei-Faktor-Authentifizierung</CardTitle>
-                  <CardDescription>
-                    Zusätzliche Sicherheit für dein Konto
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">2FA aktivieren</p>
-                      <p className="text-sm text-muted-foreground">
-                        Nutze eine Authenticator-App
-                      </p>
-                    </div>
-                    <Button variant="outline">Einrichten</Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border/50 border-red-500/20">
-                <CardHeader>
-                  <CardTitle className="text-red-500">Gefahrenzone</CardTitle>
-                  <CardDescription>
-                    Diese Aktionen können nicht rückgängig gemacht werden
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="destructive">
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Konto löschen
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </TabsContent>
-
-          {/* Billing Tab */}
-          <TabsContent value="billing">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
-            >
-              <Card className="bg-card border-border/50">
-                <CardHeader>
-                  <CardTitle>Rechnungsadresse</CardTitle>
-                  <CardDescription>
-                    Wird für Rechnungen verwendet
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="billingName">Name</Label>
-                      <Input id="billingName" defaultValue="Max Mustermann" />
-                    </div>
-                    <div>
-                      <Label htmlFor="billingCompany">Firma</Label>
-                      <Input id="billingCompany" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="billingAddress">Adresse</Label>
-                    <Input id="billingAddress" placeholder="Straße & Hausnummer" />
-                  </div>
-                  <div className="grid sm:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="billingZip">PLZ</Label>
-                      <Input id="billingZip" />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <Label htmlFor="billingCity">Stadt</Label>
-                      <Input id="billingCity" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="vatId">USt-IdNr.</Label>
-                    <Input id="vatId" placeholder="DE123456789" />
-                  </div>
-                  <Button onClick={handleSave} disabled={isSaving}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Speichern
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border/50">
-                <CardHeader>
-                  <CardTitle>Zahlungsmethoden</CardTitle>
-                  <CardDescription>
-                    Verwalte deine Zahlungsmethoden
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between p-4 border border-border/50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-6 bg-gradient-to-r from-blue-600 to-blue-400 rounded flex items-center justify-center text-white text-xs font-bold">
-                        VISA
-                      </div>
+                    <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium">•••• •••• •••• 4242</p>
+                        <p className="font-medium">Sprache</p>
                         <p className="text-sm text-muted-foreground">
-                          Läuft ab 12/25
+                          Wähle deine bevorzugte Sprache
                         </p>
                       </div>
+                      <Select defaultValue="de">
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="de">Deutsch</SelectItem>
+                          <SelectItem value="en">English</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Badge>Standard</Badge>
-                  </div>
-                  <Button variant="outline" className="mt-4">
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Neue Karte hinzufügen
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </TabsContent>
+                  </CardContent>
+                </Card>
 
-          {/* Preferences Tab */}
-          <TabsContent value="preferences">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <Card className="bg-card border-border/50">
-                <CardHeader>
-                  <CardTitle>Präferenzen</CardTitle>
-                  <CardDescription>
-                    Passe die App an deine Bedürfnisse an
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Sprache</p>
-                      <p className="text-sm text-muted-foreground">
-                        Wähle deine bevorzugte Sprache
-                      </p>
-                    </div>
-                    <Select defaultValue="de">
-                      <SelectTrigger className="w-[180px]">
-                        <Globe className="w-4 h-4 mr-2" />
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="de">Deutsch</SelectItem>
-                        <SelectItem value="en">English</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Dark Mode</p>
-                      <p className="text-sm text-muted-foreground">
-                        Dunkles Farbschema verwenden
-                      </p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Auto-Play</p>
-                      <p className="text-sm text-muted-foreground">
-                        Audio-Previews automatisch abspielen
-                      </p>
-                    </div>
-                    <Switch />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Kompakte Ansicht</p>
-                      <p className="text-sm text-muted-foreground">
-                        Weniger Abstände für mehr Inhalt
-                      </p>
-                    </div>
-                    <Switch />
-                  </div>
-
-                  <Button onClick={handleSave} disabled={isSaving}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Speichern
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </TabsContent>
-        </Tabs>
+                {/* Danger Zone */}
+                <Card className="bg-card/50 border-destructive/50">
+                  <CardHeader>
+                    <CardTitle className="text-destructive">Gefahrenzone</CardTitle>
+                    <CardDescription>
+                      Irreversible Aktionen für dein Konto
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive">
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Konto löschen
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Konto wirklich löschen?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Diese Aktion kann nicht rückgängig gemacht werden.
+                            Alle deine Daten, Käufe und Lizenzen werden dauerhaft
+                            gelöscht.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                          <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Konto löschen
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </motion.main>
+        </div>
       </div>
     </div>
   );
 }
-

@@ -1,21 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  Search,
   FileText,
   Download,
-  Eye,
+  Search,
   Calendar,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
+  Euro,
+  Eye,
   Filter,
+  ChevronDown,
+  Check,
+  X,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -33,265 +36,262 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// Mock invoices
-const mockInvoices = [
+// Mock invoices data
+const invoices = [
   {
-    id: "INV-2024-00123",
+    id: "INV-2024-0047",
+    date: "2024-01-22",
+    items: ["Neon Dreams", "Epic Horizon"],
+    amount: 473.62,
+    status: "PAID",
+    type: "marketplace",
+  },
+  {
+    id: "INV-2024-0046",
+    date: "2024-01-20",
+    items: ["Corporate Video Soundtrack (Anzahlung)"],
+    amount: 135.0,
+    status: "PAID",
+    type: "custom",
+  },
+  {
+    id: "INV-2024-0045",
+    date: "2024-01-15",
+    items: ["Podcast Intro Music"],
+    amount: 333.20,
+    status: "PENDING",
+    type: "custom",
+  },
+  {
+    id: "INV-2024-0044",
+    date: "2024-01-10",
+    items: ["Urban Flow"],
+    amount: 46.41,
+    status: "PAID",
+    type: "marketplace",
+  },
+  {
+    id: "INV-2024-0043",
     date: "2024-01-05",
-    dueDate: "2024-01-19",
-    items: [
-      { title: "Neon Dreams", license: "COMMERCIAL", price: 79.99 },
-      { title: "Corporate Success", license: "PERSONAL", price: 29.99 },
-    ],
-    subtotal: 109.98,
-    tax: 20.90,
-    total: 130.88,
+    items: ["YouTube Channel Intro"],
+    amount: 214.20,
     status: "PAID",
-    paidAt: "2024-01-05",
+    type: "custom",
   },
   {
-    id: "INV-2024-00089",
-    date: "2024-01-01",
-    dueDate: "2024-01-15",
-    items: [
-      { title: "Epic Cinematic Trailer (Custom)", license: "COMMERCIAL", price: 450.00 },
-    ],
-    subtotal: 450.00,
-    tax: 85.50,
-    total: 535.50,
+    id: "INV-2023-0142",
+    date: "2023-12-28",
+    items: ["Wedding Video Music"],
+    amount: 380.80,
     status: "PAID",
-    paidAt: "2024-01-02",
-  },
-  {
-    id: "INV-2023-00456",
-    date: "2023-12-20",
-    dueDate: "2024-01-03",
-    items: [
-      { title: "Brand Jingle (Custom)", license: "EXCLUSIVE", price: 800.00 },
-    ],
-    subtotal: 800.00,
-    tax: 152.00,
-    total: 952.00,
-    status: "PAID",
-    paidAt: "2023-12-21",
+    type: "custom",
   },
 ];
 
-const statusConfig = {
-  PAID: {
-    label: "Bezahlt",
-    color: "bg-green-500/10 text-green-500 border-green-500/20",
-    icon: CheckCircle2,
-  },
-  UNPAID: {
-    label: "Offen",
-    color: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-    icon: Clock,
-  },
-  OVERDUE: {
-    label: "Überfällig",
-    color: "bg-red-500/10 text-red-500 border-red-500/20",
-    icon: AlertCircle,
-  },
+const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: typeof Check }> = {
+  PAID: { label: "Bezahlt", color: "text-green-500", bgColor: "bg-green-500/20", icon: Check },
+  PENDING: { label: "Ausstehend", color: "text-yellow-500", bgColor: "bg-yellow-500/20", icon: Clock },
+  OVERDUE: { label: "Überfällig", color: "text-red-500", bgColor: "bg-red-500/20", icon: X },
+  CANCELLED: { label: "Storniert", color: "text-gray-500", bgColor: "bg-gray-500/20", icon: X },
 };
 
 export default function InvoicesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
 
-  // Filter invoices
-  const filteredInvoices = mockInvoices.filter((invoice) => {
-    if (statusFilter !== "all" && invoice.status !== statusFilter) {
-      return false;
-    }
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      if (
-        !invoice.id.toLowerCase().includes(query) &&
-        !invoice.items.some((item) => item.title.toLowerCase().includes(query))
-      ) {
-        return false;
-      }
-    }
-    return true;
+  const filteredInvoices = invoices.filter((invoice) => {
+    const matchesSearch =
+      invoice.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      invoice.items.some((item) =>
+        item.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    const matchesStatus =
+      statusFilter === "all" || invoice.status === statusFilter;
+    const matchesType = typeFilter === "all" || invoice.type === typeFilter;
+    return matchesSearch && matchesStatus && matchesType;
   });
 
-  // Calculate totals
-  const totalSpent = mockInvoices
+  const totalPaid = invoices
     .filter((i) => i.status === "PAID")
-    .reduce((sum, i) => sum + i.total, 0);
+    .reduce((sum, i) => sum + i.amount, 0);
+
+  const totalPending = invoices
+    .filter((i) => i.status === "PENDING")
+    .reduce((sum, i) => sum + i.amount, 0);
 
   return (
-    <div className="min-h-screen pt-20 pb-16">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen pt-20 pb-16 bg-background">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="font-serif text-3xl sm:text-4xl mb-2">Rechnungen</h1>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="font-serif text-4xl mb-2">Rechnungen</h1>
           <p className="text-muted-foreground">
-            Alle deine Rechnungen und Lizenznachweise
+            {invoices.length} Rechnungen insgesamt
           </p>
-        </div>
+        </motion.div>
 
         {/* Stats */}
-        <div className="grid sm:grid-cols-3 gap-4 mb-8">
-          <Card className="bg-card border-border/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid sm:grid-cols-3 gap-4 mb-8"
+        >
+          <Card className="bg-card/50 border-border/50">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
                 <FileText className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-serif">{mockInvoices.length}</p>
+                <p className="text-2xl font-serif">{invoices.length}</p>
                 <p className="text-sm text-muted-foreground">Rechnungen</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-card border-border/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                <CheckCircle2 className="w-6 h-6 text-green-500" />
+          <Card className="bg-card/50 border-border/50">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg bg-green-500/20 flex items-center justify-center">
+                <Check className="w-6 h-6 text-green-500" />
               </div>
               <div>
-                <p className="text-2xl font-serif">
-                  {mockInvoices.filter((i) => i.status === "PAID").length}
-                </p>
+                <p className="text-2xl font-serif">€{totalPaid.toFixed(2)}</p>
                 <p className="text-sm text-muted-foreground">Bezahlt</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-card border-border/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-amber-500" />
+          <Card className="bg-card/50 border-border/50">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+                <Clock className="w-6 h-6 text-yellow-500" />
               </div>
               <div>
-                <p className="text-2xl font-serif">€{totalSpent.toFixed(2)}</p>
-                <p className="text-sm text-muted-foreground">Gesamtausgaben</p>
+                <p className="text-2xl font-serif">€{totalPending.toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground">Ausstehend</p>
               </div>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
 
         {/* Filters */}
-        <Card className="bg-card border-border/50 mb-6">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <div className="relative flex-1 w-full sm:max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Rechnung suchen..."
-                  className="pl-9"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Alle Status</SelectItem>
-                  <SelectItem value="PAID">Bezahlt</SelectItem>
-                  <SelectItem value="UNPAID">Offen</SelectItem>
-                  <SelectItem value="OVERDUE">Überfällig</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="flex flex-col sm:flex-row gap-4 mb-6"
+        >
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Suche nach Rechnungsnummer oder Artikel..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-card/50"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Status</SelectItem>
+              <SelectItem value="PAID">Bezahlt</SelectItem>
+              <SelectItem value="PENDING">Ausstehend</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Typ" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Typen</SelectItem>
+              <SelectItem value="marketplace">Marktplatz</SelectItem>
+              <SelectItem value="custom">Custom Music</SelectItem>
+            </SelectContent>
+          </Select>
+        </motion.div>
 
         {/* Invoices Table */}
-        <Card className="bg-card border-border/50">
-          <CardContent className="p-0">
-            {filteredInvoices.length === 0 ? (
-              <div className="py-16 text-center">
-                <FileText className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
-                <h3 className="text-lg font-medium mb-2">Keine Rechnungen gefunden</h3>
-                <p className="text-muted-foreground">
-                  {mockInvoices.length === 0
-                    ? "Du hast noch keine Rechnungen"
-                    : "Versuche andere Filter"}
-                </p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card className="bg-card/50 border-border/50 overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Rechnungsnr.</TableHead>
+                  <TableHead>Datum</TableHead>
+                  <TableHead>Artikel</TableHead>
+                  <TableHead>Typ</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Betrag</TableHead>
+                  <TableHead className="text-right">Aktionen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredInvoices.length === 0 ? (
                   <TableRow>
-                    <TableHead>Rechnungsnr.</TableHead>
-                    <TableHead>Datum</TableHead>
-                    <TableHead>Artikel</TableHead>
-                    <TableHead className="text-right">Betrag</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Aktionen</TableHead>
+                    <TableCell colSpan={7} className="text-center py-16">
+                      <FileText className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
+                      <p className="font-medium mb-1">Keine Rechnungen gefunden</p>
+                      <p className="text-sm text-muted-foreground">
+                        Versuche andere Filter oder Suchbegriffe
+                      </p>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredInvoices.map((invoice, index) => {
-                    const status = statusConfig[invoice.status as keyof typeof statusConfig];
-                    const StatusIcon = status.icon;
-
+                ) : (
+                  filteredInvoices.map((invoice) => {
+                    const status = statusConfig[invoice.status];
                     return (
-                      <motion.tr
-                        key={invoice.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                      >
+                      <TableRow key={invoice.id}>
+                        <TableCell className="font-medium">{invoice.id}</TableCell>
                         <TableCell>
-                          <span className="font-mono font-medium">{invoice.id}</span>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
                           {new Date(invoice.date).toLocaleDateString("de-DE")}
                         </TableCell>
                         <TableCell>
-                          <div className="max-w-xs">
-                            {invoice.items.map((item, i) => (
-                              <div key={i} className="text-sm">
-                                <span className="font-medium">{item.title}</span>
-                                <Badge variant="secondary" className="ml-2 text-xs">
-                                  {item.license}
-                                </Badge>
-                              </div>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div>
-                            <p className="font-medium">€{invoice.total.toFixed(2)}</p>
-                            <p className="text-xs text-muted-foreground">
-                              inkl. €{invoice.tax.toFixed(2)} MwSt.
-                            </p>
+                          <div className="max-w-[200px] truncate">
+                            {invoice.items.join(", ")}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={status.color}>
-                            <StatusIcon className="w-3 h-3 mr-1" />
+                          <Badge variant="outline" className="text-xs">
+                            {invoice.type === "marketplace" ? "Marktplatz" : "Custom"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={`${status.bgColor} ${status.color} border-0`}>
+                            <status.icon className="w-3 h-3 mr-1" />
                             {status.label}
                           </Badge>
                         </TableCell>
+                        <TableCell className="text-right font-medium">
+                          €{invoice.amount.toFixed(2)}
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" size="sm">
-                              <Eye className="w-4 h-4 mr-1" />
-                              Ansehen
+                            <Button size="sm" variant="ghost">
+                              <Eye className="w-4 h-4" />
                             </Button>
-                            <Button variant="outline" size="sm">
-                              <Download className="w-4 h-4 mr-1" />
-                              PDF
+                            <Button size="sm" variant="ghost">
+                              <Download className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>
-                      </motion.tr>
+                      </TableRow>
                     );
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </motion.div>
       </div>
     </div>
   );
 }
-

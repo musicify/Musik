@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -10,49 +9,60 @@ import {
   Star,
   Award,
   Check,
-  Clock,
-  Music,
-  Users,
   ChevronRight,
+  Music,
+  Clock,
   MessageSquare,
-  Globe,
-  Mail,
   Calendar,
-  Briefcase,
-  Languages,
+  Zap,
+  Shield,
+  Heart,
+  Share2,
+  Mail,
+  Globe,
+  Instagram,
+  ShoppingCart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 
 // Mock director data
-const mockDirector = {
+const director = {
   id: "dir1",
   name: "Max Müller",
-  email: "max@musicify.de",
-  avatar: null,
-  avatarGradient: "from-violet-500 to-purple-600",
-  badge: "PREMIUM" as const,
-  bio: "Ich bin ein leidenschaftlicher Komponist und Produzent mit über 10 Jahren Erfahrung in der Musikproduktion. Meine Spezialgebiete sind Electronic Music und Cinematic Soundtracks. Ich arbeite eng mit meinen Kunden zusammen, um ihre Vision zum Leben zu erwecken.",
-  specialization: ["Electronic", "Cinematic", "Ambient"],
-  priceRangeMin: 200,
-  priceRangeMax: 800,
-  website: "https://maxmuller.music",
-  languages: ["Deutsch", "Englisch"],
-  experience: "10+ Jahre in der Musikproduktion, Zusammenarbeit mit internationalen Marken und Agenturen.",
-  equipment: "Ableton Live, Logic Pro X, Native Instruments Komplete, diverse Hardware-Synthesizer",
-  // Stats
+  bio: "Spezialisiert auf Electronic und Cinematic Music mit über 10 Jahren Erfahrung in der Musikproduktion. Ich arbeite mit Künstlern, Filmemachern und Marken zusammen, um einzigartige Soundtracks zu kreieren, die Geschichten erzählen und Emotionen wecken.",
+  fullBio: `Meine musikalische Reise begann vor über 15 Jahren, als ich meine ersten Beats auf einem alten Computer produzierte. Seitdem hat sich mein Stil kontinuierlich weiterentwickelt, geprägt durch Einflüsse aus der elektronischen Musikszene Berlins und der epischen Filmmusik Hollywoods.
+
+Ich habe für zahlreiche internationale Marken gearbeitet, darunter BMW, Adidas und Red Bull. Meine Musik wurde in Werbekampagnen, Dokumentarfilmen und Videospielen eingesetzt.
+
+Was mich antreibt, ist die Möglichkeit, mit meiner Musik Geschichten zu erzählen und Menschen zu berühren. Jedes Projekt ist einzigartig, und ich arbeite eng mit meinen Kunden zusammen, um ihre Vision zum Leben zu erwecken.`,
+  specialization: ["Electronic", "Cinematic", "Synthwave", "Ambient"],
+  priceRange: { min: 200, max: 2500 },
+  badge: "PREMIUM",
   rating: 4.9,
-  reviewCount: 47,
-  responseTime: 4,
+  reviews: 47,
+  projects: 127,
+  responseTime: "< 2h",
   completionRate: 98,
-  avgDeliveryTime: 5,
-  totalProjects: 127,
-  memberSince: "Januar 2022",
+  memberSince: "2021",
+  avatarGradient: "from-violet-500 to-purple-600",
+  location: "Berlin, Deutschland",
+  languages: ["Deutsch", "Englisch"],
+  equipment: ["Ableton Live", "Native Instruments", "U-He Synths", "Spitfire Audio"],
+  social: {
+    website: "https://maxmuller.de",
+    instagram: "@maxmuller_music",
+  },
+  stats: {
+    avgDeliveryTime: 5,
+    revisionRate: 12,
+    repeatClients: 68,
+  },
 };
 
 // Mock portfolio tracks
@@ -61,41 +71,41 @@ const portfolioTracks = [
     id: "1",
     title: "Neon Dreams",
     genre: "Electronic",
-    mood: "Energetic",
     duration: 204,
     price: 49,
     plays: 12540,
     coverGradient: "from-purple-500 to-pink-500",
+    isNew: true,
   },
   {
     id: "5",
     title: "Digital Pulse",
-    genre: "Electronic",
-    mood: "Energetic",
+    genre: "Synthwave",
     duration: 215,
     price: 55,
     plays: 9800,
     coverGradient: "from-violet-500 to-indigo-600",
+    isNew: false,
   },
   {
     id: "9",
-    title: "Cyber Wave",
-    genre: "Electronic",
-    mood: "Dark",
-    duration: 245,
-    price: 65,
-    plays: 7650,
-    coverGradient: "from-cyan-500 to-blue-600",
+    title: "Midnight Run",
+    genre: "Cinematic",
+    duration: 287,
+    price: 79,
+    plays: 6720,
+    coverGradient: "from-blue-500 to-cyan-600",
+    isNew: false,
   },
   {
     id: "10",
-    title: "Sunset Memories",
-    genre: "Cinematic",
-    mood: "Nostalgic",
-    duration: 312,
-    price: 79,
-    plays: 5430,
-    coverGradient: "from-orange-500 to-pink-500",
+    title: "Electric Horizons",
+    genre: "Electronic",
+    duration: 234,
+    price: 59,
+    plays: 8340,
+    coverGradient: "from-amber-500 to-orange-600",
+    isNew: true,
   },
 ];
 
@@ -103,30 +113,30 @@ const portfolioTracks = [
 const reviews = [
   {
     id: "1",
-    customer: "Anna K.",
+    author: "Anna K.",
     rating: 5,
+    date: "2024-01-15",
+    project: "Werbevideo Soundtrack",
     comment:
-      "Max hat meine Vision perfekt umgesetzt. Die Kommunikation war super und die Musik ist genau das, was ich gesucht habe!",
-    project: "Corporate Video",
-    date: "vor 2 Wochen",
+      "Max hat unsere Erwartungen übertroffen! Die Musik passte perfekt zu unserem Werbespot und wurde pünktlich geliefert. Sehr professionelle Kommunikation.",
   },
   {
     id: "2",
-    customer: "Michael S.",
+    author: "Michael S.",
     rating: 5,
+    date: "2024-01-10",
+    project: "Corporate Film",
     comment:
-      "Professionelle Arbeit, schnelle Lieferung. Werde definitiv wieder mit Max zusammenarbeiten.",
-    project: "Gaming Soundtrack",
-    date: "vor 1 Monat",
+      "Hervorragende Zusammenarbeit! Max hat unsere Vision sofort verstanden und einen atemberaubenden Soundtrack kreiert. Werden definitiv wieder mit ihm arbeiten.",
   },
   {
     id: "3",
-    customer: "Lisa M.",
+    author: "Lisa M.",
     rating: 4,
-    comment:
-      "Sehr zufrieden mit dem Ergebnis. Die Revision wurde schnell umgesetzt.",
+    date: "2023-12-28",
     project: "YouTube Intro",
-    date: "vor 2 Monaten",
+    comment:
+      "Sehr gute Qualität und schnelle Kommunikation. Eine kleine Revision war nötig, aber das Endergebnis ist fantastisch.",
   },
 ];
 
@@ -136,101 +146,223 @@ function formatDuration(seconds: number) {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-function StarRating({ rating }: { rating: number }) {
+function BadgeIcon({ badge }: { badge: string | null }) {
+  if (!badge) return null;
+
+  const badgeConfig = {
+    PREMIUM: { icon: Award, className: "badge-premium", label: "Premium Komponist" },
+    TOP_SELLER: { icon: Star, className: "badge-top-seller", label: "Top Seller" },
+    VERIFIED: { icon: Check, className: "badge-verified", label: "Verifiziert" },
+  };
+
+  const config = badgeConfig[badge as keyof typeof badgeConfig];
+  if (!config) return null;
+
   return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={`w-4 h-4 ${
-            star <= rating
-              ? "text-amber-400 fill-amber-400"
-              : "text-muted-foreground"
-          }`}
-        />
-      ))}
-    </div>
+    <Badge className={`${config.className} text-sm`}>
+      <config.icon className="w-3.5 h-3.5 mr-1" />
+      {config.label}
+    </Badge>
   );
 }
 
-export default function DirectorProfilePage() {
-  const params = useParams();
+export default function DirectorDetailPage() {
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("portfolio");
 
   return (
     <div className="min-h-screen pt-20 pb-16">
-      {/* Breadcrumb */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">
-            Home
-          </Link>
-          <ChevronRight className="w-4 h-4" />
-          <Link
-            href="/directors"
-            className="hover:text-foreground transition-colors"
-          >
-            Komponisten
-          </Link>
-          <ChevronRight className="w-4 h-4" />
-          <span className="text-foreground">{mockDirector.name}</span>
-        </nav>
-      </div>
+      {/* Hero Section */}
+      <section className="relative py-12 overflow-hidden">
+        <div className="absolute inset-0 hero-gradient opacity-50" />
+        <div className="absolute inset-0 pattern-dots opacity-20" />
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-[1fr,350px] gap-8">
-          {/* Main Content */}
-          <div className="space-y-8">
-            {/* Profile Header */}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
+          {/* Breadcrumb */}
+          <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
+            <Link href="/directors" className="hover:text-foreground">
+              Komponisten
+            </Link>
+            <ChevronRight className="w-4 h-4" />
+            <span className="text-foreground">{director.name}</span>
+          </nav>
+
+          <div className="grid lg:grid-cols-[300px,1fr] gap-8">
+            {/* Profile Card */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <Card className="bg-card/50 border-border/50 overflow-hidden">
-                {/* Cover */}
-                <div className="h-32 bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20" />
-                <CardContent className="p-6 -mt-12">
-                  <div className="flex flex-col sm:flex-row items-start gap-6">
-                    {/* Avatar */}
-                    <Avatar className="w-24 h-24 border-4 border-background">
-                      <AvatarImage src={mockDirector.avatar || undefined} />
+              <Card className="bg-card/80 backdrop-blur border-border/50 sticky top-24">
+                <CardContent className="p-6">
+                  <div className="text-center mb-6">
+                    <Avatar className="w-28 h-28 mx-auto mb-4">
                       <AvatarFallback
-                        className={`bg-gradient-to-br ${mockDirector.avatarGradient} text-white text-3xl font-serif`}
+                        className={`bg-gradient-to-br ${director.avatarGradient} text-white text-4xl font-serif`}
                       >
-                        {mockDirector.name.charAt(0)}
+                        {director.name.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
+                    <h1 className="font-serif text-2xl mb-2">{director.name}</h1>
+                    <BadgeIcon badge={director.badge} />
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {director.location}
+                    </p>
+                  </div>
 
-                    {/* Info */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h1 className="font-serif text-3xl">{mockDirector.name}</h1>
-                        <Badge className="badge-premium">
-                          <Award className="w-3 h-3 mr-1" />
-                          Premium
+                  <div className="flex justify-center gap-4 mb-6">
+                    <div className="text-center">
+                      <p className="text-2xl font-serif">{director.rating}</p>
+                      <div className="flex items-center gap-0.5 justify-center">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`w-3.5 h-3.5 ${
+                              i < Math.floor(director.rating)
+                                ? "text-amber-400 fill-amber-400"
+                                : "text-muted-foreground"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {director.reviews} Bewertungen
+                      </p>
+                    </div>
+                    <Separator orientation="vertical" className="h-16" />
+                    <div className="text-center">
+                      <p className="text-2xl font-serif">{director.projects}</p>
+                      <p className="text-xs text-muted-foreground">Projekte</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 mb-6">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Antwortzeit
+                      </span>
+                      <span className="font-medium text-green-500">
+                        {director.responseTime}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-2">
+                        <Zap className="w-4 h-4" />
+                        Erfolgsrate
+                      </span>
+                      <span className="font-medium">{director.completionRate}%</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        Mitglied seit
+                      </span>
+                      <span>{director.memberSince}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Link href="/custom-music">
+                      <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow hover:shadow-glow-lg">
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Auftrag erstellen
+                      </Button>
+                    </Link>
+                    <Button variant="outline" className="w-full">
+                      <Mail className="w-4 h-4 mr-2" />
+                      Nachricht senden
+                    </Button>
+                  </div>
+
+                  {/* Social Links */}
+                  <div className="flex justify-center gap-3 mt-6 pt-6 border-t border-border/50">
+                    {director.social.website && (
+                      <Button variant="ghost" size="icon" asChild>
+                        <a
+                          href={director.social.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Globe className="w-4 h-4" />
+                        </a>
+                      </Button>
+                    )}
+                    {director.social.instagram && (
+                      <Button variant="ghost" size="icon" asChild>
+                        <a
+                          href={`https://instagram.com/${director.social.instagram.replace(
+                            "@",
+                            ""
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Instagram className="w-4 h-4" />
+                        </a>
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon">
+                      <Share2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Main Content */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              {/* Price Range */}
+              <Card className="bg-card/50 border-border/50 mb-6">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Preisrahmen</p>
+                      <p className="text-3xl font-serif">
+                        €{director.priceRange.min} – €{director.priceRange.max}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {director.specialization.map((spec) => (
+                        <Badge key={spec} variant="secondary">
+                          {spec}
                         </Badge>
-                      </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
-                        <span className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                          {mockDirector.rating} ({mockDirector.reviewCount}{" "}
-                          Bewertungen)
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          ~{mockDirector.responseTime}h Antwortzeit
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Briefcase className="w-4 h-4" />
-                          {mockDirector.totalProjects} Projekte
-                        </span>
+              {/* Bio */}
+              <Card className="bg-card/50 border-border/50 mb-6">
+                <CardHeader>
+                  <CardTitle className="font-serif">Über mich</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground whitespace-pre-line">
+                    {director.fullBio}
+                  </p>
+                  <div className="mt-6 grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-medium mb-2">Sprachen</h4>
+                      <div className="flex gap-2">
+                        {director.languages.map((lang) => (
+                          <Badge key={lang} variant="outline">
+                            {lang}
+                          </Badge>
+                        ))}
                       </div>
-
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Equipment & Software</h4>
                       <div className="flex flex-wrap gap-2">
-                        {mockDirector.specialization.map((spec) => (
-                          <Badge key={spec} variant="secondary">
-                            {spec}
+                        {director.equipment.map((item) => (
+                          <Badge key={item} variant="outline">
+                            {item}
                           </Badge>
                         ))}
                       </div>
@@ -238,79 +370,77 @@ export default function DirectorProfilePage() {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
 
-            {/* Tabs */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Tabs defaultValue="portfolio">
-                <TabsList className="w-full justify-start">
-                  <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
-                  <TabsTrigger value="about">Über mich</TabsTrigger>
-                  <TabsTrigger value="reviews">
-                    Bewertungen ({mockDirector.reviewCount})
+              {/* Tabs */}
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="w-full justify-start mb-6 bg-card/50">
+                  <TabsTrigger value="portfolio">
+                    Portfolio ({portfolioTracks.length})
                   </TabsTrigger>
+                  <TabsTrigger value="reviews">
+                    Bewertungen ({reviews.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="stats">Statistiken</TabsTrigger>
                 </TabsList>
 
                 {/* Portfolio Tab */}
-                <TabsContent value="portfolio" className="mt-6">
+                <TabsContent value="portfolio">
                   <div className="grid sm:grid-cols-2 gap-4">
                     {portfolioTracks.map((track) => (
                       <Card
                         key={track.id}
-                        className="bg-card border-border/50 overflow-hidden group"
+                        className="bg-card border-border/50 overflow-hidden card-hover"
                       >
                         <CardContent className="p-0">
-                          <div
-                            className={`relative aspect-video bg-gradient-to-br ${track.coverGradient}`}
-                          >
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button
-                                size="icon"
-                                className="w-12 h-12 rounded-full bg-white text-black hover:bg-white/90"
+                          <div className="flex gap-4 p-4">
+                            <div
+                              className={`relative w-20 h-20 rounded-lg bg-gradient-to-br ${track.coverGradient} flex-shrink-0`}
+                            >
+                              <button
                                 onClick={() =>
                                   setPlayingTrackId(
-                                    playingTrackId === track.id
-                                      ? null
-                                      : track.id
+                                    playingTrackId === track.id ? null : track.id
                                   )
                                 }
+                                className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity rounded-lg"
                               >
                                 {playingTrackId === track.id ? (
-                                  <Pause className="w-5 h-5" />
+                                  <Pause className="w-6 h-6 text-white" />
                                 ) : (
-                                  <Play className="w-5 h-5 ml-0.5" />
+                                  <Play className="w-6 h-6 text-white ml-0.5" />
                                 )}
-                              </Button>
+                              </button>
+                              {track.isNew && (
+                                <Badge className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs">
+                                  Neu
+                                </Badge>
+                              )}
                             </div>
-                          </div>
-                          <div className="p-4">
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <div>
-                                <Link
-                                  href={`/track/${track.id}`}
-                                  className="font-medium hover:text-primary transition-colors"
-                                >
-                                  {track.title}
-                                </Link>
-                                <p className="text-sm text-muted-foreground">
-                                  {track.genre} · {track.mood}
-                                </p>
+                            <div className="flex-1 min-w-0">
+                              <Link
+                                href={`/track/${track.id}`}
+                                className="font-medium hover:text-primary transition-colors"
+                              >
+                                {track.title}
+                              </Link>
+                              <p className="text-sm text-muted-foreground">
+                                {track.genre}
+                              </p>
+                              <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  {formatDuration(track.duration)}
+                                </span>
+                                <span>{track.plays.toLocaleString()} plays</span>
                               </div>
-                              <Badge variant="outline">
-                                {formatDuration(track.duration)}
-                              </Badge>
                             </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">
-                                {track.plays.toLocaleString()} Plays
-                              </span>
+                            <div className="flex flex-col items-end justify-between">
                               <span className="font-semibold text-primary">
-                                €{track.price}
+                                ab €{track.price}
                               </span>
+                              <Button size="sm" variant="secondary">
+                                <ShoppingCart className="w-3.5 h-3.5" />
+                              </Button>
                             </div>
                           </div>
                         </CardContent>
@@ -319,190 +449,82 @@ export default function DirectorProfilePage() {
                   </div>
                 </TabsContent>
 
-                {/* About Tab */}
-                <TabsContent value="about" className="mt-6">
-                  <Card className="bg-card/50 border-border/50">
-                    <CardContent className="p-6 space-y-6">
-                      <div>
-                        <h3 className="font-semibold mb-2">Über mich</h3>
-                        <p className="text-muted-foreground">{mockDirector.bio}</p>
-                      </div>
-                      <Separator />
-                      <div>
-                        <h3 className="font-semibold mb-2">Erfahrung</h3>
-                        <p className="text-muted-foreground">
-                          {mockDirector.experience}
-                        </p>
-                      </div>
-                      <Separator />
-                      <div>
-                        <h3 className="font-semibold mb-2">Equipment & Software</h3>
-                        <p className="text-muted-foreground">
-                          {mockDirector.equipment}
-                        </p>
-                      </div>
-                      <Separator />
-                      <div className="grid sm:grid-cols-2 gap-4">
-                        <div>
-                          <h3 className="font-semibold mb-2 flex items-center gap-2">
-                            <Languages className="w-4 h-4" />
-                            Sprachen
-                          </h3>
-                          <div className="flex flex-wrap gap-2">
-                            {mockDirector.languages.map((lang) => (
-                              <Badge key={lang} variant="secondary">
-                                {lang}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <h3 className="font-semibold mb-2 flex items-center gap-2">
-                            <Calendar className="w-4 h-4" />
-                            Mitglied seit
-                          </h3>
-                          <p className="text-muted-foreground">
-                            {mockDirector.memberSince}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
                 {/* Reviews Tab */}
-                <TabsContent value="reviews" className="mt-6">
+                <TabsContent value="reviews">
                   <div className="space-y-4">
                     {reviews.map((review) => (
-                      <Card
-                        key={review.id}
-                        className="bg-card/50 border-border/50"
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between gap-4 mb-3">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="w-10 h-10">
-                                <AvatarFallback className="bg-secondary">
-                                  {review.customer.charAt(0)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="font-medium">{review.customer}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {review.project} · {review.date}
-                                </p>
-                              </div>
+                      <Card key={review.id} className="bg-card/50 border-border/50">
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <p className="font-medium">{review.author}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {review.project}
+                              </p>
                             </div>
-                            <StarRating rating={review.rating} />
+                            <div className="flex items-center gap-2">
+                              <div className="flex gap-0.5">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`w-4 h-4 ${
+                                      i < review.rating
+                                        ? "text-amber-400 fill-amber-400"
+                                        : "text-muted-foreground"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-sm text-muted-foreground">
+                                {new Date(review.date).toLocaleDateString("de-DE")}
+                              </span>
+                            </div>
                           </div>
-                          <p className="text-muted-foreground text-sm">
-                            {review.comment}
-                          </p>
+                          <p className="text-muted-foreground">{review.comment}</p>
                         </CardContent>
                       </Card>
                     ))}
+                  </div>
+                </TabsContent>
+
+                {/* Stats Tab */}
+                <TabsContent value="stats">
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    <Card className="bg-card/50 border-border/50">
+                      <CardContent className="p-6 text-center">
+                        <p className="text-4xl font-serif mb-2">
+                          {director.stats.avgDeliveryTime}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Tage Ø Lieferzeit
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-card/50 border-border/50">
+                      <CardContent className="p-6 text-center">
+                        <p className="text-4xl font-serif mb-2">
+                          {director.stats.revisionRate}%
+                        </p>
+                        <p className="text-sm text-muted-foreground">Revisionsrate</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-card/50 border-border/50">
+                      <CardContent className="p-6 text-center">
+                        <p className="text-4xl font-serif mb-2">
+                          {director.stats.repeatClients}%
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Wiederkehrende Kunden
+                        </p>
+                      </CardContent>
+                    </Card>
                   </div>
                 </TabsContent>
               </Tabs>
             </motion.div>
           </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Hire Card */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="bg-card border-border/50 sticky top-24">
-                <CardHeader>
-                  <CardTitle className="font-serif text-xl">
-                    Auftrag anfragen
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Price Range */}
-                  <div className="text-center py-4 rounded-lg bg-secondary/50">
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Preisrahmen
-                    </p>
-                    <p className="text-2xl font-serif">
-                      €{mockDirector.priceRangeMin} - €{mockDirector.priceRangeMax}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      pro Projekt
-                    </p>
-                  </div>
-
-                  {/* CTA */}
-                  <Link href={`/custom-music?director=${mockDirector.id}`}>
-                    <Button className="w-full h-12 bg-primary hover:bg-primary/90">
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Auftrag starten
-                    </Button>
-                  </Link>
-
-                  <Separator />
-
-                  {/* Stats */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        Antwortzeit
-                      </span>
-                      <span className="text-sm font-medium flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5" />~{mockDirector.responseTime}h
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        Lieferzeit
-                      </span>
-                      <span className="text-sm font-medium">
-                        ~{mockDirector.avgDeliveryTime} Tage
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        Abschlussrate
-                      </span>
-                      <span className="text-sm font-medium text-green-500">
-                        {mockDirector.completionRate}%
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        Bewertung
-                      </span>
-                      <span className="text-sm font-medium flex items-center gap-1">
-                        <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                        {mockDirector.rating}
-                      </span>
-                    </div>
-                  </div>
-
-                  {mockDirector.website && (
-                    <>
-                      <Separator />
-                      <a
-                        href={mockDirector.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <Globe className="w-4 h-4" />
-                        Website besuchen
-                      </a>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
-

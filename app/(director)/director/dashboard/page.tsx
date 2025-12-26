@@ -5,162 +5,114 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
-  Package,
-  MessageSquare,
   Music,
+  Package,
   Euro,
-  TrendingUp,
-  Clock,
   Star,
-  Award,
-  Check,
-  Bell,
-  Settings,
+  Clock,
+  TrendingUp,
   Upload,
-  Users,
   ChevronRight,
-  ArrowUpRight,
-  ArrowDownRight,
-  Play,
-  Eye,
-  FileText,
+  MessageSquare,
   Calendar,
+  Award,
+  BarChart3,
+  Users,
+  Eye,
+  Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 
 // Mock director data
 const director = {
   name: "Max Müller",
-  email: "max@musicify.de",
-  avatar: null,
-  badge: "PREMIUM" as const,
+  badge: "PREMIUM",
+  avatarGradient: "from-violet-500 to-purple-600",
   rating: 4.9,
-  reviewCount: 47,
-  responseTime: 4, // hours
+  reviews: 47,
+  projects: 127,
+  tracks: 47,
+  monthlyEarnings: 3450,
+  totalEarnings: 28750,
+  responseTime: 1.8,
   completionRate: 98,
-  totalProjects: 127,
-  totalEarnings: 45680,
-  monthlyEarnings: 3240,
-  pendingEarnings: 890,
 };
 
-// Mock stats
-const stats = {
-  newOrders: 3,
-  activeOrders: 5,
-  completedThisMonth: 8,
-  earningsChange: 12, // percentage
-  views: 1245,
-  viewsChange: 8,
-};
-
-// Mock orders
-const pendingOrders = [
-  {
-    id: "ORD-2024-010",
-    title: "Tech Startup Promo",
-    customer: "Anna K.",
-    budget: "€300 - €500",
-    genre: "Electronic",
-    deadline: "5 Tage",
-    createdAt: "vor 2 Stunden",
-  },
-  {
-    id: "ORD-2024-009",
-    title: "Wedding Video Music",
-    customer: "Michael S.",
-    budget: "€400 - €600",
-    genre: "Cinematic",
-    deadline: "10 Tage",
-    createdAt: "vor 5 Stunden",
-  },
-  {
-    id: "ORD-2024-008",
-    title: "Gaming Stream Intro",
-    customer: "Lisa M.",
-    budget: "€150 - €250",
-    genre: "Electronic",
-    deadline: "3 Tage",
-    createdAt: "gestern",
-  },
-];
-
+// Mock active orders
 const activeOrders = [
   {
-    id: "ORD-2024-007",
+    id: "ORD-2024-003",
     title: "Corporate Video Soundtrack",
-    customer: "TechStart GmbH",
+    customer: "Max Mustermann",
     status: "IN_PROGRESS",
     price: 450,
-    deadline: "2024-02-01",
+    deadline: "2024-02-05",
     progress: 60,
+    messages: 3,
   },
   {
-    id: "ORD-2024-006",
-    title: "Podcast Intro",
-    customer: "Podcast Pro",
+    id: "ORD-2024-004",
+    title: "App Notification Sounds",
+    customer: "Tech Startup GmbH",
+    status: "PENDING",
+    price: 150,
+    deadline: null,
+    progress: 0,
+    messages: 2,
+  },
+  {
+    id: "ORD-2024-005",
+    title: "Podcast Intro Jingle",
+    customer: "Lisa Media",
     status: "REVISION_REQUESTED",
     price: 280,
-    deadline: "2024-01-28",
-    progress: 80,
+    deadline: "2024-02-10",
+    progress: 85,
+    messages: 7,
   },
 ];
 
-// Mock portfolio tracks
-const portfolioTracks = [
-  {
-    id: "1",
-    title: "Neon Dreams",
-    plays: 12540,
-    purchases: 234,
-    coverGradient: "from-purple-500 to-pink-500",
-  },
-  {
-    id: "2",
-    title: "Digital Pulse",
-    plays: 9800,
-    purchases: 189,
-    coverGradient: "from-violet-500 to-indigo-600",
-  },
-  {
-    id: "3",
-    title: "Cyber Wave",
-    plays: 7650,
-    purchases: 156,
-    coverGradient: "from-cyan-500 to-blue-600",
-  },
+// Mock recent sales
+const recentSales = [
+  { id: "1", title: "Neon Dreams", license: "Commercial", price: 49, date: "Heute" },
+  { id: "2", title: "Digital Pulse", license: "Enterprise", price: 219, date: "Gestern" },
+  { id: "3", title: "Midnight Run", license: "Commercial", price: 79, date: "22. Jan" },
+  { id: "4", title: "Electric Horizons", license: "Personal", price: 35, date: "21. Jan" },
 ];
 
-const statusLabels: Record<string, { label: string; color: string }> = {
-  PENDING: { label: "Neu", color: "bg-yellow-500" },
-  OFFER_PENDING: { label: "Angebot", color: "bg-blue-500" },
-  IN_PROGRESS: { label: "In Arbeit", color: "bg-blue-500" },
-  REVISION_REQUESTED: { label: "Revision", color: "bg-orange-500" },
-  READY_FOR_PAYMENT: { label: "Zahlung", color: "bg-purple-500" },
-  COMPLETED: { label: "Fertig", color: "bg-green-500" },
+// Mock performance data
+const performanceStats = [
+  { label: "Track-Aufrufe", value: "12.4K", change: "+18%", positive: true },
+  { label: "Conversion Rate", value: "3.2%", change: "+0.5%", positive: true },
+  { label: "Durchschn. Bewertung", value: "4.9", change: "0", positive: true },
+  { label: "Wiederkehrende Kunden", value: "68%", change: "+5%", positive: true },
+];
+
+const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
+  PENDING: { label: "Neuer Auftrag", color: "text-yellow-500", bgColor: "bg-yellow-500/20" },
+  IN_PROGRESS: { label: "In Bearbeitung", color: "text-blue-500", bgColor: "bg-blue-500/20" },
+  REVISION_REQUESTED: { label: "Revision", color: "text-orange-500", bgColor: "bg-orange-500/20" },
 };
 
-function MetricCard({
+function StatCard({
   icon: Icon,
   label,
   value,
-  change,
-  changeLabel,
-  positive,
+  subValue,
+  trend,
+  trendPositive,
 }: {
   icon: React.ElementType;
   label: string;
   value: string | number;
-  change?: number;
-  changeLabel?: string;
-  positive?: boolean;
+  subValue?: string;
+  trend?: string;
+  trendPositive?: boolean;
 }) {
   return (
     <Card className="bg-card/50 border-border/50">
@@ -169,25 +121,20 @@ function MetricCard({
           <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
             <Icon className="w-5 h-5 text-primary" />
           </div>
-          {change !== undefined && (
-            <div
-              className={`flex items-center gap-1 text-xs font-medium ${
-                positive ? "text-green-500" : "text-red-500"
+          {trend && (
+            <span
+              className={`text-xs font-medium ${
+                trendPositive ? "text-green-500" : "text-red-500"
               }`}
             >
-              {positive ? (
-                <ArrowUpRight className="w-3 h-3" />
-              ) : (
-                <ArrowDownRight className="w-3 h-3" />
-              )}
-              {change}%
-            </div>
+              {trend}
+            </span>
           )}
         </div>
         <p className="text-2xl font-serif mb-1">{value}</p>
         <p className="text-sm text-muted-foreground">{label}</p>
-        {changeLabel && (
-          <p className="text-xs text-muted-foreground mt-1">{changeLabel}</p>
+        {subValue && (
+          <p className="text-xs text-muted-foreground mt-1">{subValue}</p>
         )}
       </CardContent>
     </Card>
@@ -195,355 +142,314 @@ function MetricCard({
 }
 
 export default function DirectorDashboard() {
-  const [activeTab, setActiveTab] = useState("overview");
-
   return (
     <div className="min-h-screen pt-20 pb-16 bg-background">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8"
+        >
           <div className="flex items-center gap-4">
             <Avatar className="w-16 h-16">
-              <AvatarImage src={director.avatar || undefined} />
-              <AvatarFallback className="bg-gradient-to-br from-violet-500 to-purple-600 text-white text-xl font-serif">
+              <AvatarFallback
+                className={`bg-gradient-to-br ${director.avatarGradient} text-white text-xl font-serif`}
+              >
                 {director.name.charAt(0)}
               </AvatarFallback>
             </Avatar>
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <h1 className="font-serif text-2xl sm:text-3xl">
-                  {director.name}
+                  Hallo, {director.name.split(" ")[0]}!
                 </h1>
                 <Badge className="badge-premium">
                   <Award className="w-3 h-3 mr-1" />
-                  Premium
+                  {director.badge}
                 </Badge>
               </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                  {director.rating} ({director.reviewCount})
+                  {director.rating} ({director.reviews} Bewertungen)
                 </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5" />
-                  ~{director.responseTime}h Antwort
-                </span>
-                <span>{director.completionRate}% Abschlussrate</span>
+                <span>{director.projects} Projekte</span>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm">
-              <Bell className="w-4 h-4 mr-2" />
-              Benachrichtigungen
-              <Badge className="ml-2 bg-primary text-primary-foreground h-5 w-5 p-0 flex items-center justify-center">
-                {stats.newOrders}
-              </Badge>
-            </Button>
-            <Link href="/director/settings">
-              <Button variant="outline" size="sm">
-                <Settings className="w-4 h-4" />
+            <Link href="/director/music/upload">
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+                <Upload className="w-4 h-4 mr-2" />
+                Track hochladen
               </Button>
             </Link>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Metrics */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <MetricCard
-            icon={Package}
-            label="Neue Aufträge"
-            value={stats.newOrders}
-            changeLabel="Warten auf Angebot"
-          />
-          <MetricCard
-            icon={TrendingUp}
+        {/* Stats Overview */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+        >
+          <StatCard
+            icon={Euro}
             label="Einnahmen (Monat)"
             value={`€${director.monthlyEarnings.toLocaleString()}`}
-            change={stats.earningsChange}
-            positive={stats.earningsChange > 0}
+            trend="+12%"
+            trendPositive
           />
-          <MetricCard
-            icon={Eye}
-            label="Profil-Aufrufe"
-            value={stats.views.toLocaleString()}
-            change={stats.viewsChange}
-            positive={stats.viewsChange > 0}
+          <StatCard
+            icon={Music}
+            label="Tracks im Katalog"
+            value={director.tracks}
+            subValue={`${recentSales.length} Verkäufe diese Woche`}
           />
-          <MetricCard
-            icon={Euro}
-            label="Ausstehend"
-            value={`€${director.pendingEarnings}`}
-            changeLabel="Warten auf Zahlung"
+          <StatCard
+            icon={Package}
+            label="Aktive Aufträge"
+            value={activeOrders.length}
+            subValue={`${activeOrders.filter((o) => o.status === "PENDING").length} neue Anfragen`}
           />
-        </div>
+          <StatCard
+            icon={Clock}
+            label="Ø Antwortzeit"
+            value={`${director.responseTime}h`}
+            trend="Top 10%"
+            trendPositive
+          />
+        </motion.div>
 
         {/* Main Content */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full justify-start mb-6 bg-card/50">
-            <TabsTrigger value="overview">Übersicht</TabsTrigger>
-            <TabsTrigger value="orders">Aufträge</TabsTrigger>
-            <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
-            <TabsTrigger value="earnings">Einnahmen</TabsTrigger>
-          </TabsList>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid lg:grid-cols-[1fr,400px] gap-6">
-              {/* Pending Orders */}
+        <div className="grid lg:grid-cols-[1fr,400px] gap-8">
+          {/* Left Column */}
+          <div className="space-y-8">
+            {/* Active Orders */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
               <Card className="bg-card/50 border-border/50">
                 <CardHeader className="flex-row items-center justify-between">
-                  <CardTitle className="font-serif text-xl">
-                    Neue Auftragsanfragen
-                    <Badge className="ml-2 bg-primary">{pendingOrders.length}</Badge>
-                  </CardTitle>
+                  <CardTitle className="font-serif">Aktive Aufträge</CardTitle>
+                  <Link href="/director/orders">
+                    <Button variant="ghost" size="sm">
+                      Alle ansehen
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </Link>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {pendingOrders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="p-4 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
-                    >
-                      <div className="flex items-start justify-between gap-4 mb-3">
-                        <div>
-                          <p className="font-medium">{order.title}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {order.customer} · {order.createdAt}
-                          </p>
-                        </div>
-                        <Badge variant="secondary">{order.genre}</Badge>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-4 text-muted-foreground">
-                          <span className="text-primary font-medium">
-                            {order.budget}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5" />
-                            {order.deadline}
-                          </span>
-                        </div>
-                        <Link href={`/director/orders/${order.id}`}>
-                          <Button size="sm">
-                            Angebot abgeben
-                            <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Active Orders & Performance */}
-              <div className="space-y-6">
-                {/* Active Orders */}
-                <Card className="bg-card/50 border-border/50">
-                  <CardHeader>
-                    <CardTitle className="font-serif text-lg">
-                      Aktive Projekte
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {activeOrders.map((order) => (
-                      <Link
-                        key={order.id}
-                        href={`/director/orders/${order.id}`}
-                        className="block"
-                      >
-                        <div className="p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="font-medium text-sm">{order.title}</p>
-                            <Badge
-                              variant="secondary"
-                              className={`text-xs ${
-                                statusLabels[order.status]?.color
-                              } bg-opacity-20`}
-                            >
-                              {statusLabels[order.status]?.label}
+                  {activeOrders.map((order) => {
+                    const status = statusConfig[order.status];
+                    return (
+                      <Link key={order.id} href={`/director/orders/${order.id}`}>
+                        <div className="p-4 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors">
+                          <div className="flex items-start justify-between gap-4 mb-3">
+                            <div>
+                              <p className="font-medium">{order.title}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {order.customer} · {order.id}
+                              </p>
+                            </div>
+                            <Badge className={`${status.bgColor} ${status.color} border-0`}>
+                              {status.label}
                             </Badge>
                           </div>
-                          <Progress value={order.progress} className="h-1.5 mb-2" />
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{order.customer}</span>
-                            <span>€{order.price}</span>
+                          {order.progress > 0 && (
+                            <div className="mb-3">
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="text-muted-foreground">Fortschritt</span>
+                                <span>{order.progress}%</span>
+                              </div>
+                              <Progress value={order.progress} className="h-2" />
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-3 text-muted-foreground">
+                              {order.deadline && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3.5 h-3.5" />
+                                  {new Date(order.deadline).toLocaleDateString("de-DE")}
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1">
+                                <MessageSquare className="w-3.5 h-3.5" />
+                                {order.messages} ungelesen
+                              </span>
+                            </div>
+                            <span className="font-medium text-primary">€{order.price}</span>
                           </div>
                         </div>
                       </Link>
-                    ))}
-                  </CardContent>
-                </Card>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            </motion.div>
 
-                {/* Performance Metrics */}
-                <Card className="bg-card/50 border-border/50">
-                  <CardHeader>
-                    <CardTitle className="font-serif text-lg">
-                      Performance
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Antwortzeit</span>
-                        <span className="text-sm font-medium text-green-500">
-                          {director.responseTime}h ✓
-                        </span>
-                      </div>
-                      <Progress value={90} className="h-2" />
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Abschlussrate</span>
-                        <span className="text-sm font-medium text-green-500">
-                          {director.completionRate}% ✓
-                        </span>
-                      </div>
-                      <Progress value={director.completionRate} className="h-2" />
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Kundenzufriedenheit</span>
-                        <span className="text-sm font-medium">
-                          {director.rating}/5.0
-                        </span>
-                      </div>
-                      <Progress value={(director.rating / 5) * 100} className="h-2" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            {/* Top Portfolio Tracks */}
-            <Card className="bg-card/50 border-border/50">
-              <CardHeader className="flex-row items-center justify-between">
-                <CardTitle className="font-serif text-xl">
-                  Top Tracks
-                </CardTitle>
-                <Link href="/director/portfolio">
-                  <Button variant="ghost" size="sm">
-                    Portfolio verwalten
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
-                </Link>
-              </CardHeader>
-              <CardContent>
-                <div className="grid sm:grid-cols-3 gap-4">
-                  {portfolioTracks.map((track) => (
-                    <div
-                      key={track.id}
-                      className="flex items-center gap-4 p-4 rounded-lg bg-secondary/50"
-                    >
+            {/* Performance Stats */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card className="bg-card/50 border-border/50">
+                <CardHeader>
+                  <CardTitle className="font-serif">Performance</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {performanceStats.map((stat) => (
                       <div
-                        className={`w-12 h-12 rounded-lg bg-gradient-to-br ${track.coverGradient} flex-shrink-0`}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{track.title}</p>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Play className="w-3 h-3" />
-                            {track.plays.toLocaleString()}
+                        key={stat.label}
+                        className="p-4 rounded-lg bg-secondary/50"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-muted-foreground">
+                            {stat.label}
                           </span>
-                          <span className="flex items-center gap-1">
-                            <Euro className="w-3 h-3" />
-                            {track.purchases}
+                          <span
+                            className={`text-xs font-medium ${
+                              stat.positive ? "text-green-500" : "text-red-500"
+                            }`}
+                          >
+                            {stat.change}
                           </span>
                         </div>
+                        <p className="text-2xl font-serif">{stat.value}</p>
                       </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-6">
+            {/* Earnings Overview */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Card className="bg-card/50 border-border/50">
+                <CardHeader>
+                  <CardTitle className="font-serif">Einnahmen</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center p-6 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 mb-4">
+                    <p className="text-4xl font-serif mb-1">
+                      €{director.totalEarnings.toLocaleString()}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Gesamteinnahmen
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-3 rounded-lg bg-secondary/50">
+                      <p className="text-xl font-serif">€{director.monthlyEarnings}</p>
+                      <p className="text-xs text-muted-foreground">Dieser Monat</p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                    <div className="text-center p-3 rounded-lg bg-secondary/50">
+                      <p className="text-xl font-serif">{recentSales.length}</p>
+                      <p className="text-xs text-muted-foreground">Verkäufe (Woche)</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-          {/* Orders Tab */}
-          <TabsContent value="orders">
-            <Card className="bg-card/50 border-border/50">
-              <CardHeader>
-                <CardTitle className="font-serif text-xl">
-                  Alle Aufträge
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Auftragsübersicht wird hier angezeigt...
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Portfolio Tab */}
-          <TabsContent value="portfolio">
-            <Card className="bg-card/50 border-border/50">
-              <CardHeader className="flex-row items-center justify-between">
-                <CardTitle className="font-serif text-xl">
-                  Mein Portfolio
-                </CardTitle>
-                <Button>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Track hochladen
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {portfolioTracks.map((track) => (
-                    <Card key={track.id} className="bg-secondary/50 border-none">
-                      <CardContent className="p-4">
+            {/* Recent Sales */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card className="bg-card/50 border-border/50">
+                <CardHeader>
+                  <CardTitle className="font-serif">Letzte Verkäufe</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[250px]">
+                    <div className="space-y-3">
+                      {recentSales.map((sale) => (
                         <div
-                          className={`aspect-square rounded-lg bg-gradient-to-br ${track.coverGradient} mb-4`}
-                        />
-                        <p className="font-medium mb-2">{track.title}</p>
-                        <div className="flex items-center justify-between text-sm text-muted-foreground">
-                          <span>{track.plays.toLocaleString()} Plays</span>
-                          <span>{track.purchases} Verkäufe</span>
+                          key={sale.id}
+                          className="flex items-center justify-between p-3 rounded-lg bg-secondary/50"
+                        >
+                          <div>
+                            <p className="font-medium text-sm">{sale.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {sale.license} · {sale.date}
+                            </p>
+                          </div>
+                          <span className="font-medium text-primary">
+                            €{sale.price}
+                          </span>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-          {/* Earnings Tab */}
-          <TabsContent value="earnings">
-            <div className="grid lg:grid-cols-3 gap-6">
+            {/* Quick Actions */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
               <Card className="bg-card/50 border-border/50">
-                <CardContent className="p-6 text-center">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Gesamteinnahmen
-                  </p>
-                  <p className="text-3xl font-serif text-primary">
-                    €{director.totalEarnings.toLocaleString()}
-                  </p>
+                <CardHeader>
+                  <CardTitle className="font-serif">Schnellzugriff</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Link href="/director/music">
+                    <Button variant="ghost" className="w-full justify-start h-auto py-3">
+                      <Music className="w-4 h-4 mr-3 text-primary" />
+                      <div className="text-left">
+                        <p className="font-medium text-sm">Meine Musik</p>
+                        <p className="text-xs text-muted-foreground">
+                          {director.tracks} Tracks verwalten
+                        </p>
+                      </div>
+                    </Button>
+                  </Link>
+                  <Link href="/director/orders">
+                    <Button variant="ghost" className="w-full justify-start h-auto py-3">
+                      <Package className="w-4 h-4 mr-3 text-primary" />
+                      <div className="text-left">
+                        <p className="font-medium text-sm">Aufträge</p>
+                        <p className="text-xs text-muted-foreground">
+                          {activeOrders.length} aktive Aufträge
+                        </p>
+                      </div>
+                    </Button>
+                  </Link>
+                  <Link href="/director/settings">
+                    <Button variant="ghost" className="w-full justify-start h-auto py-3">
+                      <Users className="w-4 h-4 mr-3 text-primary" />
+                      <div className="text-left">
+                        <p className="font-medium text-sm">Profil bearbeiten</p>
+                        <p className="text-xs text-muted-foreground">
+                          Portfolio und Einstellungen
+                        </p>
+                      </div>
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
-              <Card className="bg-card/50 border-border/50">
-                <CardContent className="p-6 text-center">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Diesen Monat
-                  </p>
-                  <p className="text-3xl font-serif">
-                    €{director.monthlyEarnings.toLocaleString()}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="bg-card/50 border-border/50">
-                <CardContent className="p-6 text-center">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Ausstehend
-                  </p>
-                  <p className="text-3xl font-serif text-orange-500">
-                    €{director.pendingEarnings}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
+            </motion.div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-

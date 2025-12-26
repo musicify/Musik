@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -12,101 +11,157 @@ import {
   Share2,
   Download,
   Clock,
-  Music,
-  Tag,
   Calendar,
-  User,
+  Music,
   Star,
   Award,
   Check,
   ChevronRight,
   Info,
-  Headphones,
+  Shield,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { WaveformPlayer } from "@/components/music/waveform-player";
-import { LICENSE_TYPES } from "@/lib/constants";
 
 // Mock track data
-const mockTrack = {
+const track = {
   id: "1",
   title: "Neon Dreams",
   description:
-    "Ein energetischer Electronic-Track mit pulsierenden Synthesizern und treibenden Beats. Perfekt für dynamische Werbespots, Gaming-Content oder Tech-Präsentationen. Der Track baut sich langsam auf und explodiert in einem kraftvollen Drop.",
-  artist: "Max Müller",
-  artistId: "dir1",
-  artistBio:
-    "Max Müller ist ein preisgekrönter Komponist mit über 10 Jahren Erfahrung in der Musikproduktion. Spezialisiert auf Electronic und Cinematic Music.",
-  artistBadge: "PREMIUM" as const,
-  artistProjects: 127,
-  artistRating: 4.9,
+    "Ein energetischer Electronic-Track mit pulsierenden Synthesizern und treibenden Beats. Perfekt für dynamische Werbevideos, Gaming-Content oder Tech-Präsentationen. Der Track baut sich langsam auf und erreicht einen kraftvollen Drop nach 1:20.",
+  artist: {
+    id: "dir1",
+    name: "Max Müller",
+    badge: "PREMIUM",
+    avatarGradient: "from-violet-500 to-purple-600",
+    tracks: 47,
+    rating: 4.9,
+  },
   genre: "Electronic",
   subgenre: "Synthwave",
   mood: "Energetic",
-  useCase: "Werbung",
-  era: "Modern",
-  duration: 204,
-  bpm: 128,
+  style: "Modern",
+  useCase: "Advertising, Gaming, Tech",
+  structure: "Intro - Build - Drop - Breakdown - Drop - Outro",
+  era: "Contemporary",
+  tempo: 128,
   key: "A Minor",
-  structure: "Full Track",
-  tags: ["Electronic", "Energetic", "Synth", "Modern", "Werbung", "Dynamic"],
-  audioUrl: "/audio/preview.mp3", // Mock URL
+  duration: 204,
+  releaseDate: "2024-01-15",
+  plays: 12540,
   coverGradient: "from-purple-500 to-pink-500",
-  pricePersonal: 29,
-  priceCommercial: 49,
-  priceEnterprise: 199,
-  priceExclusive: 990,
-  playCount: 12540,
-  purchaseCount: 234,
-  createdAt: "2024-01-15",
   isNew: true,
+  licenses: [
+    {
+      type: "PERSONAL",
+      name: "Personal",
+      icon: "🎵",
+      price: 29,
+      description: "Für private Projekte",
+      features: [
+        "Private Nutzung",
+        "Hobbyprojekte",
+        "Keine kommerzielle Verwendung",
+        "Wasserzeichen-freier Download",
+      ],
+      restrictions: ["Keine monetarisierten Inhalte", "Keine Werbekampagnen"],
+    },
+    {
+      type: "COMMERCIAL",
+      name: "Commercial",
+      icon: "🎬",
+      price: 49,
+      description: "Für kommerzielle Projekte",
+      features: [
+        "YouTube, Social Media",
+        "Kleine Werbekampagnen",
+        "Bis 100K Reichweite",
+        "WAV + MP3 Download",
+        "Lizenz-Zertifikat",
+      ],
+      restrictions: ["Keine TV/Kino-Nutzung", "Begrenzte Reichweite"],
+      popular: true,
+    },
+    {
+      type: "ENTERPRISE",
+      name: "Enterprise",
+      icon: "🏢",
+      price: 199,
+      description: "Für große Kampagnen",
+      features: [
+        "Unbegrenzte Reichweite",
+        "TV & Film",
+        "Große Werbekampagnen",
+        "Alle Dateiformate",
+        "Prioritäts-Support",
+      ],
+      restrictions: [],
+    },
+    {
+      type: "EXCLUSIVE",
+      name: "Exclusive",
+      icon: "🔒",
+      price: 999,
+      description: "Exklusivrechte",
+      features: [
+        "Alle Rechte übertragen",
+        "Track wird entfernt",
+        "Einzigartige Nutzung",
+        "Stems inklusive",
+        "Full Buyout",
+      ],
+      restrictions: [],
+    },
+  ],
 };
 
-// Mock similar tracks
+// Similar tracks mock
 const similarTracks = [
   {
     id: "5",
     title: "Digital Pulse",
     artist: "Max Müller",
     genre: "Electronic",
-    price: 55,
     duration: 215,
+    price: 55,
     coverGradient: "from-violet-500 to-indigo-600",
   },
   {
-    id: "3",
-    title: "Urban Flow",
+    id: "6",
+    title: "Cyber Rush",
     artist: "Tom Weber",
-    genre: "Hip-Hop",
-    price: 39,
-    duration: 178,
+    genre: "Electronic",
+    duration: 198,
+    price: 45,
     coverGradient: "from-cyan-500 to-blue-600",
   },
   {
-    id: "8",
-    title: "Summer Vibes",
+    id: "7",
+    title: "Future Motion",
     artist: "Lisa Braun",
-    genre: "Pop",
-    price: 49,
-    duration: 198,
-    coverGradient: "from-pink-400 to-purple-500",
+    genre: "Synthwave",
+    duration: 226,
+    price: 59,
+    coverGradient: "from-pink-500 to-rose-600",
   },
 ];
 
@@ -116,562 +171,465 @@ function formatDuration(seconds: number) {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-function LicenseTable({
-  selectedLicense,
-  onSelect,
-}: {
-  selectedLicense: string;
-  onSelect: (license: string) => void;
-}) {
-  const licenses = [
-    {
-      type: "PERSONAL",
-      name: "Personal",
-      icon: "🎵",
-      price: mockTrack.pricePersonal,
-      description: "Für private Projekte",
-      features: [
-        "Private Nutzung",
-        "Hobbyprojekte",
-        "Social Media (nicht monetarisiert)",
-      ],
-      popular: false,
-    },
-    {
-      type: "COMMERCIAL",
-      name: "Commercial",
-      icon: "🎬",
-      price: mockTrack.priceCommercial,
-      description: "Für kommerzielle Projekte",
-      features: [
-        "YouTube monetarisiert",
-        "Social Media Ads",
-        "Bis 100K Reichweite",
-      ],
-      popular: true,
-    },
-    {
-      type: "ENTERPRISE",
-      name: "Enterprise",
-      icon: "🏢",
-      price: mockTrack.priceEnterprise,
-      description: "Für große Kampagnen",
-      features: ["Unbegrenzte Reichweite", "TV & Radio", "Weltweite Nutzung"],
-      popular: false,
-    },
-    {
-      type: "EXCLUSIVE",
-      name: "Exclusive",
-      icon: "🔒",
-      price: mockTrack.priceExclusive,
-      description: "Exklusivrechte",
-      features: [
-        "Alle Rechte übertragen",
-        "Track wird entfernt",
-        "Einzigartige Nutzung",
-      ],
-      popular: false,
-    },
-  ];
-
-  return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {licenses.map((license) => (
-        <Card
-          key={license.type}
-          className={`cursor-pointer transition-all relative ${
-            selectedLicense === license.type
-              ? "border-primary shadow-glow-sm"
-              : "border-border/50 hover:border-border"
-          }`}
-          onClick={() => onSelect(license.type)}
-        >
-          {license.popular && (
-            <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-              <Badge className="bg-primary text-primary-foreground">
-                Beliebt
-              </Badge>
-            </div>
-          )}
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-2xl">{license.icon}</span>
-              {selectedLicense === license.type && (
-                <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                  <Check className="w-3 h-3 text-primary-foreground" />
-                </div>
-              )}
-            </div>
-            <h4 className="font-semibold mb-1">{license.name}</h4>
-            <p className="text-2xl font-serif mb-2">€{license.price}</p>
-            <p className="text-xs text-muted-foreground mb-3">
-              {license.description}
-            </p>
-            <ul className="space-y-1.5">
-              {license.features.map((feature, i) => (
-                <li
-                  key={i}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground"
-                >
-                  <Check className="w-3 h-3 text-primary" />
-                  {feature}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString("de-DE", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 export default function TrackDetailPage() {
-  const params = useParams();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [selectedLicense, setSelectedLicense] = useState("COMMERCIAL");
 
-  const selectedLicenseData = LICENSE_TYPES.find(
-    (l) => l.type === selectedLicense
-  );
-  const currentPrice =
-    selectedLicense === "PERSONAL"
-      ? mockTrack.pricePersonal
-      : selectedLicense === "COMMERCIAL"
-      ? mockTrack.priceCommercial
-      : selectedLicense === "ENTERPRISE"
-      ? mockTrack.priceEnterprise
-      : mockTrack.priceExclusive;
+  const currentLicense = track.licenses.find((l) => l.type === selectedLicense);
 
   return (
     <div className="min-h-screen pt-20 pb-16">
-      {/* Breadcrumb */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">
-            Home
-          </Link>
-          <ChevronRight className="w-4 h-4" />
-          <Link
-            href="/marketplace"
-            className="hover:text-foreground transition-colors"
-          >
-            Musik kaufen
-          </Link>
-          <ChevronRight className="w-4 h-4" />
-          <span className="text-foreground">{mockTrack.title}</span>
-        </nav>
-      </div>
+      {/* Hero Section with Track Info */}
+      <section className="relative py-12 overflow-hidden">
+        <div className="absolute inset-0 hero-gradient opacity-50" />
+        <div className="absolute inset-0 pattern-dots opacity-20" />
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-[1fr,400px] gap-8">
-          {/* Left Column - Track Info */}
-          <div className="space-y-8">
-            {/* Header */}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
+          {/* Breadcrumb */}
+          <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
+            <Link href="/marketplace" className="hover:text-foreground">
+              Marktplatz
+            </Link>
+            <ChevronRight className="w-4 h-4" />
+            <Link
+              href={`/marketplace?genre=${track.genre}`}
+              className="hover:text-foreground"
+            >
+              {track.genre}
+            </Link>
+            <ChevronRight className="w-4 h-4" />
+            <span className="text-foreground">{track.title}</span>
+          </nav>
+
+          <div className="grid lg:grid-cols-[400px,1fr] gap-12">
+            {/* Cover & Player */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col md:flex-row gap-6"
             >
-              {/* Cover */}
               <div
-                className={`relative w-full md:w-64 aspect-square rounded-2xl bg-gradient-to-br ${mockTrack.coverGradient} flex-shrink-0 shadow-2xl`}
+                className={`relative aspect-square rounded-2xl bg-gradient-to-br ${track.coverGradient} shadow-2xl overflow-hidden`}
               >
+                {/* Play Button */}
                 <button
                   onClick={() => setIsPlaying(!isPlaying)}
-                  className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors rounded-2xl"
+                  className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors"
                 >
-                  {isPlaying ? (
-                    <Pause className="w-16 h-16 text-white" />
-                  ) : (
-                    <Play className="w-16 h-16 text-white ml-2" />
-                  )}
+                  <div className="w-20 h-20 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-xl">
+                    {isPlaying ? (
+                      <Pause className="w-8 h-8 text-black" />
+                    ) : (
+                      <Play className="w-8 h-8 text-black ml-1" />
+                    )}
+                  </div>
                 </button>
-                {mockTrack.isNew && (
-                  <div className="absolute top-4 left-4">
+
+                {/* Equalizer Animation */}
+                {isPlaying && (
+                  <div className="absolute bottom-6 left-6 flex items-end gap-1 h-8">
+                    {[...Array(5)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-1.5 bg-white rounded-full animate-equalizer"
+                        style={{
+                          animationDelay: `${i * 0.15}s`,
+                          height: "100%",
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Badges */}
+                <div className="absolute top-4 right-4 flex flex-col gap-2">
+                  {track.isNew && (
                     <Badge className="bg-primary text-primary-foreground">
                       Neu
                     </Badge>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
-              {/* Info */}
-              <div className="flex-1">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h1 className="font-serif text-3xl md:text-4xl mb-2">
-                      {mockTrack.title}
-                    </h1>
-                    <Link
-                      href={`/directors/${mockTrack.artistId}`}
-                      className="inline-flex items-center gap-2 text-lg text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {mockTrack.artist}
-                      {mockTrack.artistBadge === "PREMIUM" && (
-                        <Badge className="badge-premium">
-                          <Award className="w-3 h-3 mr-1" />
-                          Premium
-                        </Badge>
-                      )}
-                    </Link>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            onClick={() => setIsLiked(!isLiked)}
-                          >
-                            <Heart
-                              className={`w-5 h-5 ${
-                                isLiked ? "fill-red-500 text-red-500" : ""
-                              }`}
-                            />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Merken</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button size="icon" variant="outline">
-                            <Share2 className="w-5 h-5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Teilen</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
+              {/* Waveform Placeholder */}
+              <div className="mt-4 h-16 bg-card rounded-lg flex items-center justify-center border border-border/50">
+                <div className="flex items-end gap-0.5 h-10">
+                  {[...Array(50)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-1 bg-primary/30 rounded-full"
+                      style={{
+                        height: `${20 + Math.random() * 80}%`,
+                      }}
+                    />
+                  ))}
                 </div>
+              </div>
 
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mt-4">
-                  <Badge variant="secondary">{mockTrack.genre}</Badge>
-                  <Badge variant="secondary">{mockTrack.mood}</Badge>
-                  <Badge variant="secondary">{mockTrack.useCase}</Badge>
+              {/* Track Stats */}
+              <div className="mt-4 flex items-center justify-around py-4 bg-card rounded-lg border border-border/50">
+                <div className="text-center">
+                  <p className="text-2xl font-serif">{track.plays.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">Plays</p>
                 </div>
-
-                {/* Stats */}
-                <div className="flex flex-wrap items-center gap-6 mt-6 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="w-4 h-4" />
-                    {formatDuration(mockTrack.duration)}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Music className="w-4 h-4" />
-                    {mockTrack.bpm} BPM
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Tag className="w-4 h-4" />
-                    {mockTrack.key}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Headphones className="w-4 h-4" />
-                    {mockTrack.playCount.toLocaleString()} Plays
-                  </div>
+                <Separator orientation="vertical" className="h-10" />
+                <div className="text-center">
+                  <p className="text-2xl font-serif">{track.tempo}</p>
+                  <p className="text-xs text-muted-foreground">BPM</p>
+                </div>
+                <Separator orientation="vertical" className="h-10" />
+                <div className="text-center">
+                  <p className="text-2xl font-serif">{track.key}</p>
+                  <p className="text-xs text-muted-foreground">Tonart</p>
                 </div>
               </div>
             </motion.div>
 
-            {/* Audio Player */}
+            {/* Track Details */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
+              className="space-y-6"
             >
-              <WaveformPlayer
-                audioUrl={mockTrack.audioUrl}
-                title={mockTrack.title}
-                artist={mockTrack.artist}
-              />
-            </motion.div>
-
-            {/* License Selection */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <h2 className="font-serif text-2xl mb-4">Lizenz wählen</h2>
-              <LicenseTable
-                selectedLicense={selectedLicense}
-                onSelect={setSelectedLicense}
-              />
-              <div className="mt-4">
-                <Link
-                  href="/licensing"
-                  className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
-                >
-                  <Info className="w-4 h-4" />
-                  Mehr über Lizenzmodelle erfahren
-                </Link>
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <Badge variant="secondary">{track.genre}</Badge>
+                  <Badge variant="outline">{track.mood}</Badge>
+                </div>
+                <h1 className="font-serif text-4xl lg:text-5xl mb-2">
+                  {track.title}
+                </h1>
+                <div className="flex items-center gap-4 text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    {formatDuration(track.duration)}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-4 h-4" />
+                    {formatDate(track.releaseDate)}
+                  </span>
+                </div>
               </div>
-            </motion.div>
 
-            {/* Tabs - Description, Details, Artist */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Tabs defaultValue="description">
-                <TabsList className="w-full justify-start">
-                  <TabsTrigger value="description">Beschreibung</TabsTrigger>
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                  <TabsTrigger value="artist">Künstler</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="description" className="mt-4">
-                  <Card className="bg-card/50 border-border/50">
-                    <CardContent className="p-6">
-                      <p className="text-muted-foreground leading-relaxed">
-                        {mockTrack.description}
-                      </p>
-                      <div className="flex flex-wrap gap-2 mt-4">
-                        {mockTrack.tags.map((tag) => (
-                          <Badge key={tag} variant="outline">
-                            {tag}
-                          </Badge>
-                        ))}
+              {/* Artist Card */}
+              <Link href={`/directors/${track.artist.id}`}>
+                <Card className="bg-card/50 border-border/50 hover:border-border transition-colors cursor-pointer">
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <Avatar className="w-14 h-14">
+                      <AvatarFallback
+                        className={`bg-gradient-to-br ${track.artist.avatarGradient} text-white text-lg font-serif`}
+                      >
+                        {track.artist.name.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold">{track.artist.name}</p>
+                        <Badge className="badge-premium">
+                          <Award className="w-3 h-3 mr-1" />
+                          {track.artist.badge}
+                        </Badge>
                       </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="details" className="mt-4">
-                  <Card className="bg-card/50 border-border/50">
-                    <CardContent className="p-6">
-                      <dl className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <dt className="text-muted-foreground">Genre</dt>
-                          <dd className="font-medium">{mockTrack.genre}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">Subgenre</dt>
-                          <dd className="font-medium">{mockTrack.subgenre}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">Stimmung</dt>
-                          <dd className="font-medium">{mockTrack.mood}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">Verwendung</dt>
-                          <dd className="font-medium">{mockTrack.useCase}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">BPM</dt>
-                          <dd className="font-medium">{mockTrack.bpm}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">Tonart</dt>
-                          <dd className="font-medium">{mockTrack.key}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">Struktur</dt>
-                          <dd className="font-medium">{mockTrack.structure}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">Epoche</dt>
-                          <dd className="font-medium">{mockTrack.era}</dd>
-                        </div>
-                      </dl>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="artist" className="mt-4">
-                  <Card className="bg-card/50 border-border/50">
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-2xl font-serif">
-                          {mockTrack.artist.charAt(0)}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-lg">
-                              {mockTrack.artist}
-                            </h3>
-                            <Badge className="badge-premium">
-                              <Award className="w-3 h-3 mr-1" />
-                              Premium
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                            <span className="flex items-center gap-1">
-                              <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                              {mockTrack.artistRating}
-                            </span>
-                            <span>{mockTrack.artistProjects} Projekte</span>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-4">
-                            {mockTrack.artistBio}
-                          </p>
-                          <Link href={`/directors/${mockTrack.artistId}`}>
-                            <Button variant="outline" size="sm">
-                              Profil ansehen
-                              <ChevronRight className="w-4 h-4 ml-1" />
-                            </Button>
-                          </Link>
-                        </div>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                          {track.artist.rating}
+                        </span>
+                        <span>{track.artist.tracks} Tracks</span>
                       </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-            </motion.div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  </CardContent>
+                </Card>
+              </Link>
 
-            {/* Similar Tracks */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-serif text-2xl">Ähnliche Tracks</h2>
-                <Link href="/marketplace">
-                  <Button variant="ghost" size="sm">
-                    Alle ansehen
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
-                </Link>
-              </div>
-              <div className="grid sm:grid-cols-3 gap-4">
-                {similarTracks.map((track) => (
-                  <Link key={track.id} href={`/track/${track.id}`}>
-                    <Card className="bg-card border-border/50 overflow-hidden card-hover">
-                      <CardContent className="p-0">
-                        <div
-                          className={`aspect-square bg-gradient-to-br ${track.coverGradient}`}
-                        />
-                        <div className="p-3">
-                          <h4 className="font-medium truncate">{track.title}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {track.artist}
-                          </p>
-                          <div className="flex items-center justify-between mt-2 text-sm">
-                            <span className="text-muted-foreground">
-                              {formatDuration(track.duration)}
-                            </span>
-                            <span className="font-semibold text-primary">
-                              €{track.price}
-                            </span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
+              {/* Description */}
+              <p className="text-muted-foreground leading-relaxed">
+                {track.description}
+              </p>
+
+              {/* Tags */}
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">{track.subgenre}</Badge>
+                <Badge variant="outline">{track.style}</Badge>
+                {track.useCase.split(", ").map((use) => (
+                  <Badge key={use} variant="outline">
+                    {use}
+                  </Badge>
                 ))}
               </div>
-            </motion.div>
-          </div>
 
-          {/* Right Column - Purchase Card */}
-          <div className="lg:sticky lg:top-24 h-fit">
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="bg-card border-border/50 shadow-xl">
-                <CardHeader>
-                  <CardTitle className="font-serif text-2xl">Kaufen</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Selected License */}
-                  <div className="p-4 rounded-lg bg-secondary/50">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">
-                        Lizenz
-                      </span>
-                      <Select
-                        value={selectedLicense}
-                        onValueChange={setSelectedLicense}
-                      >
-                        <SelectTrigger className="w-[140px] h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="PERSONAL">🎵 Personal</SelectItem>
-                          <SelectItem value="COMMERCIAL">
-                            🎬 Commercial
-                          </SelectItem>
-                          <SelectItem value="ENTERPRISE">
-                            🏢 Enterprise
-                          </SelectItem>
-                          <SelectItem value="EXCLUSIVE">
-                            🔒 Exclusive
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedLicenseData?.description}
-                    </p>
-                  </div>
-
-                  {/* Price */}
-                  <div className="text-center py-4">
-                    <span className="text-4xl font-serif">€{currentPrice}</span>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      inkl. MwSt.
-                    </p>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="space-y-3">
-                    <Button className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground shadow-glow hover:shadow-glow-lg transition-all">
-                      <ShoppingCart className="w-5 h-5 mr-2" />
-                      In den Warenkorb
-                    </Button>
-                    <Button variant="outline" className="w-full h-12">
-                      <Download className="w-5 h-5 mr-2" />
-                      Vorschau herunterladen
-                    </Button>
-                  </div>
-
-                  <Separator />
-
-                  {/* License Features */}
-                  <div>
-                    <h4 className="font-medium mb-3">Inklusive:</h4>
-                    <ul className="space-y-2">
-                      {selectedLicenseData?.features.map((feature, i) => (
-                        <li
-                          key={i}
-                          className="flex items-center gap-2 text-sm text-muted-foreground"
-                        >
-                          <Check className="w-4 h-4 text-primary" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <Separator />
-
-                  {/* Trust Badges */}
-                  <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5 text-green-500" />
-                      Sichere Zahlung
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5 text-green-500" />
-                      Sofort-Download
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Actions */}
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsLiked(!isLiked)}
+                >
+                  <Heart
+                    className={`w-5 h-5 ${
+                      isLiked ? "fill-red-500 text-red-500" : ""
+                    }`}
+                  />
+                </Button>
+                <Button variant="outline" size="icon">
+                  <Share2 className="w-5 h-5" />
+                </Button>
+              </div>
             </motion.div>
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* License Selection & Purchase */}
+      <section className="py-12">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="font-serif text-3xl mb-8">Lizenz wählen</h2>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {track.licenses.map((license) => (
+              <Card
+                key={license.type}
+                className={`cursor-pointer transition-all ${
+                  selectedLicense === license.type
+                    ? "border-primary shadow-glow-sm"
+                    : "border-border/50 hover:border-border"
+                }`}
+                onClick={() => setSelectedLicense(license.type)}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-2xl">{license.icon}</span>
+                    {license.popular && (
+                      <Badge className="bg-primary text-primary-foreground">
+                        Beliebt
+                      </Badge>
+                    )}
+                    {selectedLicense === license.type && (
+                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="w-4 h-4 text-primary-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="font-semibold text-lg mb-1">{license.name}</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {license.description}
+                  </p>
+                  <p className="text-2xl font-serif">€{license.price}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Selected License Details */}
+          {currentLicense && (
+            <Card className="bg-card/50 border-border/50">
+              <CardContent className="p-6">
+                <div className="grid md:grid-cols-[1fr,auto] gap-8">
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="text-3xl">{currentLicense.icon}</span>
+                      <div>
+                        <h3 className="text-xl font-semibold">
+                          {currentLicense.name} Lizenz
+                        </h3>
+                        <p className="text-muted-foreground">
+                          {currentLicense.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid sm:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="font-medium mb-3 flex items-center gap-2">
+                          <Check className="w-4 h-4 text-green-500" />
+                          Inklusive
+                        </h4>
+                        <ul className="space-y-2">
+                          {currentLicense.features.map((feature) => (
+                            <li
+                              key={feature}
+                              className="flex items-center gap-2 text-sm text-muted-foreground"
+                            >
+                              <Check className="w-3.5 h-3.5 text-green-500" />
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      {currentLicense.restrictions.length > 0 && (
+                        <div>
+                          <h4 className="font-medium mb-3 flex items-center gap-2">
+                            <Info className="w-4 h-4 text-amber-500" />
+                            Einschränkungen
+                          </h4>
+                          <ul className="space-y-2">
+                            {currentLicense.restrictions.map((restriction) => (
+                              <li
+                                key={restriction}
+                                className="flex items-center gap-2 text-sm text-muted-foreground"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                {restriction}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end justify-between">
+                    <div className="text-right">
+                      <p className="text-4xl font-serif mb-1">
+                        €{currentLicense.price}
+                      </p>
+                      <p className="text-sm text-muted-foreground">inkl. MwSt.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Button
+                        size="lg"
+                        className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow hover:shadow-glow-lg w-full"
+                      >
+                        <ShoppingCart className="w-5 h-5 mr-2" />
+                        In den Warenkorb
+                      </Button>
+                      <p className="text-xs text-center text-muted-foreground flex items-center gap-1 justify-center">
+                        <Shield className="w-3 h-3" />
+                        Sichere Zahlung
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </section>
+
+      {/* License Comparison Table */}
+      <section className="py-12 bg-card/50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="font-serif text-3xl mb-8">Lizenz-Vergleich</h2>
+          <Card className="border-border/50 overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">Feature</TableHead>
+                  <TableHead className="text-center">Personal</TableHead>
+                  <TableHead className="text-center bg-primary/5">Commercial</TableHead>
+                  <TableHead className="text-center">Enterprise</TableHead>
+                  <TableHead className="text-center">Exclusive</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="font-medium">Preis</TableCell>
+                  <TableCell className="text-center">€29</TableCell>
+                  <TableCell className="text-center bg-primary/5 font-semibold">€49</TableCell>
+                  <TableCell className="text-center">€199</TableCell>
+                  <TableCell className="text-center">€999</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Private Nutzung</TableCell>
+                  <TableCell className="text-center"><Check className="w-4 h-4 mx-auto text-green-500" /></TableCell>
+                  <TableCell className="text-center bg-primary/5"><Check className="w-4 h-4 mx-auto text-green-500" /></TableCell>
+                  <TableCell className="text-center"><Check className="w-4 h-4 mx-auto text-green-500" /></TableCell>
+                  <TableCell className="text-center"><Check className="w-4 h-4 mx-auto text-green-500" /></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Social Media</TableCell>
+                  <TableCell className="text-center">—</TableCell>
+                  <TableCell className="text-center bg-primary/5"><Check className="w-4 h-4 mx-auto text-green-500" /></TableCell>
+                  <TableCell className="text-center"><Check className="w-4 h-4 mx-auto text-green-500" /></TableCell>
+                  <TableCell className="text-center"><Check className="w-4 h-4 mx-auto text-green-500" /></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Werbekampagnen</TableCell>
+                  <TableCell className="text-center">—</TableCell>
+                  <TableCell className="text-center bg-primary/5">Klein</TableCell>
+                  <TableCell className="text-center">Unbegrenzt</TableCell>
+                  <TableCell className="text-center">Unbegrenzt</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">TV & Film</TableCell>
+                  <TableCell className="text-center">—</TableCell>
+                  <TableCell className="text-center bg-primary/5">—</TableCell>
+                  <TableCell className="text-center"><Check className="w-4 h-4 mx-auto text-green-500" /></TableCell>
+                  <TableCell className="text-center"><Check className="w-4 h-4 mx-auto text-green-500" /></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Reichweite</TableCell>
+                  <TableCell className="text-center">Privat</TableCell>
+                  <TableCell className="text-center bg-primary/5">100K</TableCell>
+                  <TableCell className="text-center">Unbegrenzt</TableCell>
+                  <TableCell className="text-center">Unbegrenzt</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Exklusiv</TableCell>
+                  <TableCell className="text-center">—</TableCell>
+                  <TableCell className="text-center bg-primary/5">—</TableCell>
+                  <TableCell className="text-center">—</TableCell>
+                  <TableCell className="text-center"><Check className="w-4 h-4 mx-auto text-green-500" /></TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </Card>
+        </div>
+      </section>
+
+      {/* Similar Tracks */}
+      <section className="py-12">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="font-serif text-3xl">Ähnliche Tracks</h2>
+            <Link href="/marketplace">
+              <Button variant="ghost">
+                Mehr entdecken
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </Link>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {similarTracks.map((similarTrack) => (
+              <Link key={similarTrack.id} href={`/track/${similarTrack.id}`}>
+                <Card className="bg-card border-border/50 overflow-hidden card-hover">
+                  <CardContent className="p-0">
+                    <div
+                      className={`aspect-video bg-gradient-to-br ${similarTrack.coverGradient}`}
+                    />
+                    <div className="p-4">
+                      <h3 className="font-semibold mb-1">{similarTrack.title}</h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {similarTrack.artist}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="w-3.5 h-3.5" />
+                          {formatDuration(similarTrack.duration)}
+                        </div>
+                        <span className="font-semibold text-primary">
+                          ab €{similarTrack.price}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
-
