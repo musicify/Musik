@@ -1,0 +1,245 @@
+{
+  "platform": {
+    "name": "Musicify",
+    "type": "Music Marketplace & Custom Music Production Platform",
+    "url": "https://musicify.de",
+    "description": "Musicify ist eine zweiseitige Plattform, die Kreative mit professionellen Komponisten verbindet. Die Plattform bietet zwei Hauptservices: 1) Einen Marktplatz für lizenzierte Musik mit über 10.000 Tracks, 2) Einen Custom Music Service für individuelle Musikproduktionen.",
+    "founded": "2020",
+    "location": "Berlin, Germany",
+    "language": "German (primary), English (supported)"
+  },
+  "services": {
+    "marketplace": {
+      "description": "Marktplatz für lizenzierte Musik mit sofortigem Download",
+      "inventory": "10,000+ tracks",
+      "genres": [
+        "Electronic",
+        "Cinematic",
+        "Pop",
+        "Hip-Hop",
+        "Rock",
+        "Classical",
+        "Jazz",
+        "Ambient",
+        "Corporate",
+        "World Music"
+      ],
+      "licenses": [
+        {
+          "name": "Personal",
+          "price_range": "€29-€79",
+          "use_cases": ["Private videos", "Hobby projects", "Non-commercial social media"]
+        },
+        {
+          "name": "Commercial",
+          "price_range": "€99-€199",
+          "use_cases": ["YouTube monetization", "Social media ads", "Corporate videos", "Podcasts"]
+        },
+        {
+          "name": "Extended",
+          "price_range": "€299-€499",
+          "use_cases": ["Advertising campaigns", "Films", "Apps/Games", "Unlimited views"]
+        },
+        {
+          "name": "Broadcast",
+          "price_range": "€599-€999",
+          "use_cases": ["TV", "Radio", "Cinema", "Major campaigns", "Streaming services"]
+        }
+      ],
+      "features": [
+        "Instant download",
+        "High quality (WAV, MP3)",
+        "Full preview available",
+        "Advanced search and filters",
+        "Secure payment processing",
+        "License certificate included"
+      ]
+    },
+    "custom_music": {
+      "description": "Individuelle Musikproduktion durch professionelle Komponisten",
+      "composers": "500+ verified professionals",
+      "process": [
+        "1. Select genre, style, and mood",
+        "2. Provide detailed project description",
+        "3. Choose composer based on portfolio and reviews",
+        "4. Direct communication via chat",
+        "5. Receive drafts and provide feedback",
+        "6. Final delivery with full rights transfer"
+      ],
+      "price_range": "€200-€5000 per track",
+      "average_turnaround": "7-14 days",
+      "revisions_included": 3,
+      "rights": "Full rights transfer (buyout)",
+      "features": [
+        "Direct composer communication",
+        "Portfolio review",
+        "Customer ratings and reviews",
+        "Milestone-based payment",
+        "Quality guarantee",
+        "Express service available"
+      ]
+    }
+  },
+  "target_audience": {
+    "primary": [
+      "Filmmakers and video producers",
+      "Content creators (YouTube, TikTok, Instagram)",
+      "Advertising agencies",
+      "Game developers",
+      "Podcast producers",
+      "Corporate marketing teams"
+    ],
+    "secondary": [
+      "Event organizers",
+      "App developers",
+      "E-learning platforms",
+      "Retail businesses",
+      "Fitness studios"
+    ]
+  },
+  "composers": {
+    "count": "500+",
+    "verification": "All composers are verified professionals with proven experience",
+    "specializations": [
+      "Film scoring",
+      "Advertising music",
+      "Electronic production",
+      "Orchestral arrangements",
+      "Pop/Rock production",
+      "Sound design"
+    ],
+    "earnings": {
+      "marketplace_commission": "70% to composer",
+      "custom_music_commission": "80% to composer",
+      "average_monthly_income": "€2,000-€8,000"
+    },
+    "requirements": [
+      "Proven professional experience",
+      "Professional equipment",
+      "Portfolio with minimum 5 tracks",
+      "Availability for client communication"
+    ]
+  },
+  "statistics": {
+    "tracks": "10,000+",
+    "composers": "500+",
+    "customers": "5,000+",
+    "satisfaction_rate": "99%",
+    "average_rating": "4.8/5",
+    "total_reviews": "2,500+"
+  },
+  "technology": {
+    "frontend": "Next.js, React, TypeScript, Tailwind CSS",
+    "backend": "Node.js, Supabase, PostgreSQL",
+    "payment": "Stripe",
+    "hosting": "Vercel",
+    "features": [
+      "Real-time audio preview",
+      "Advanced filtering system",
+      "Secure file delivery",
+      "Integrated chat system",
+      "Order tracking",
+      "Invoice generation"
+    ]
+  },
+  "legal": {
+    "licenses": "All music is fully licensed and GEMA-compliant",
+    "rights_clearance": "Complete rights clearance for all use cases",
+    "contracts": "Legally binding license agreements",
+    "data_protection": "GDPR compliant",
+    "payment_security": "PCI DSS compliant payment processing"
+  },
+  "support": {
+    "channels": ["Email", "Live Chat", "Help Center", "FAQ"],
+    "languages": ["German", "English"],
+    "response_time": "Within 24 hours",
+    "availability": "Monday-Friday, 9:00-18:00 CET"
+  },
+  "pricing_examples": {
+    "marketplace": [
+      {
+        "use_case": "YouTube video (monetized)",
+        "recommended_license": "Commercial",
+        "typical_price": "€99-€149"
+      },
+      {
+        "use_case": "Instagram ad campaign",
+        "recommended_license": "Commercial or Extended",
+        "typical_price": "€149-€299"
+      },
+      {
+        "use_case": "TV commercial",
+        "recommended_license": "Broadcast",
+        "typical_price": "€599-€999"
+      }
+    ],
+    "custom_music": [
+      {
+        "use_case": "30-second ad jingle",
+        "typical_price": "€500-€1,500",
+        "turnaround": "5-7 days"
+      },
+      {
+        "use_case": "3-minute film score",
+        "typical_price": "€1,500-€3,000",
+        "turnaround": "10-14 days"
+      },
+      {
+        "use_case": "Full album production",
+        "typical_price": "€5,000-€15,000",
+        "turnaround": "4-8 weeks"
+      }
+    ]
+  },
+  "competitive_advantages": [
+    "Large selection of high-quality licensed music",
+    "Direct access to professional composers",
+    "Transparent pricing and licensing",
+    "Fast turnaround times",
+    "Secure payment and delivery",
+    "Excellent customer support",
+    "GEMA-compliant licensing",
+    "Quality guarantee"
+  ],
+  "common_questions": [
+    {
+      "question": "What's the difference between marketplace and custom music?",
+      "answer": "Marketplace offers pre-made tracks for immediate download, while custom music is individually produced for your specific needs."
+    },
+    {
+      "question": "Can I use marketplace music commercially?",
+      "answer": "Yes, with a Commercial, Extended, or Broadcast license depending on your use case."
+    },
+    {
+      "question": "How long does custom music production take?",
+      "answer": "Average turnaround is 7-14 days, with express service available for urgent projects."
+    },
+    {
+      "question": "Are all tracks GEMA-free?",
+      "answer": "All tracks are properly licensed and GEMA-compliant. License fees are included in the purchase price."
+    },
+    {
+      "question": "Can I request revisions for custom music?",
+      "answer": "Yes, 3 revisions are included in all custom music projects. Additional revisions available for a fee."
+    }
+  ],
+  "seo_keywords": [
+    "Musik kaufen",
+    "Lizenzierte Musik",
+    "Custom Music",
+    "Musikproduktion",
+    "Komponist beauftragen",
+    "GEMA-freie Musik",
+    "Royalty-free Musik",
+    "Filmmusik",
+    "Werbemusik",
+    "Stock Music",
+    "Produktionsmusik",
+    "Hintergrundmusik",
+    "Musik für Videos",
+    "YouTube Musik",
+    "Podcast Musik"
+  ],
+  "last_updated": "2025-12-26"
+}
+

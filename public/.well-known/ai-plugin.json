@@ -1,0 +1,18 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Musicify",
+  "name_for_model": "musicify",
+  "description_for_human": "Kaufe lizenzierte Musik oder beauftrage individuelle Musikproduktion bei professionellen Komponisten.",
+  "description_for_model": "Musicify ist eine Plattform für lizenzierte Musik und Custom Music Production. Nutzer können aus über 10.000 Tracks wählen oder individuelle Musik bei 500+ Komponisten beauftragen. Die Plattform bietet verschiedene Lizenzmodelle (Personal, Commercial, Extended, Broadcast) und einen vollständigen Custom Music Service mit direkter Komponisten-Kommunikation.",
+  "api": {
+    "type": "openapi",
+    "url": "https://musicify.de/api/openapi.json"
+  },
+  "auth": {
+    "type": "none"
+  },
+  "logo_url": "https://musicify.de/logo.png",
+  "contact_email": "info@musicify.de",
+  "legal_info_url": "https://musicify.de/terms"
+}
+

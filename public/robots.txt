@@ -1,0 +1,106 @@
+# robots.txt für Musicify
+# https://musicify.de/robots.txt
+
+User-agent: *
+Allow: /
+Allow: /marketplace
+Allow: /custom-music
+Allow: /directors
+Allow: /about
+Allow: /pricing
+Allow: /faq
+Allow: /blog
+Allow: /for-artists
+Allow: /licensing
+Allow: /contact
+Allow: /help
+
+# Disallow private/auth pages
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /cart/
+Disallow: /checkout/
+Disallow: /orders/
+Disallow: /downloads/
+Disallow: /settings/
+Disallow: /invoices/
+Disallow: /login
+Disallow: /register
+Disallow: /sign-in
+Disallow: /sign-up
+Disallow: /director/
+
+# Allow specific bots
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+# AI Crawlers (ASEO)
+User-agent: GPTBot
+Allow: /
+Allow: /about
+Allow: /faq
+Allow: /pricing
+Allow: /licensing
+Allow: /for-artists
+Disallow: /api/
+Disallow: /admin/
+
+User-agent: ChatGPT-User
+Allow: /
+Allow: /about
+Allow: /faq
+Allow: /pricing
+Allow: /licensing
+Allow: /for-artists
+
+User-agent: CCBot
+Allow: /
+Allow: /about
+Allow: /faq
+Allow: /pricing
+Allow: /licensing
+
+User-agent: anthropic-ai
+Allow: /
+Allow: /about
+Allow: /faq
+Allow: /pricing
+Allow: /licensing
+Allow: /for-artists
+
+User-agent: Claude-Web
+Allow: /
+Allow: /about
+Allow: /faq
+Allow: /pricing
+Allow: /licensing
+
+User-agent: PerplexityBot
+Allow: /
+Allow: /about
+Allow: /faq
+Allow: /pricing
+Allow: /licensing
+Allow: /for-artists
+
+User-agent: YouBot
+Allow: /
+
+# Sitemap
+Sitemap: https://musicify.de/sitemap.xml
+Sitemap: https://musicify.de/sitemap-tracks.xml
+Sitemap: https://musicify.de/sitemap-directors.xml
+
+# Crawl-delay for specific bots
+Crawl-delay: 1
+
