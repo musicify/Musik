@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { musicApi, MusicTrack, MusicFilters, MusicListResponse } from "@/lib/api";
+import { musicApi, MusicTrack, MusicFilters, MusicListResponse } from "@/lib/api/client";
 import { toast } from "sonner";
 
 export function useMusic(initialFilters?: MusicFilters) {

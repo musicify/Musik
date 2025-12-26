@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ordersApi, Order, CreateOrderData, OfferData } from "@/lib/api";
+import { ordersApi, Order, CreateOrderData, OfferData } from "@/lib/api/client";
 import { toast } from "sonner";
 
 export function useOrders(role?: "customer" | "director") {
