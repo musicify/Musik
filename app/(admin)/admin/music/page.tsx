@@ -80,7 +80,7 @@ const mockPendingMusic: PendingMusic[] = [
       director: {
         user: {
           name: "Sarah Schmidt",
-          image: null,
+          image: undefined,
         },
       },
     },
@@ -102,7 +102,7 @@ const mockPendingMusic: PendingMusic[] = [
       director: {
         user: {
           name: "Max Müller",
-          image: null,
+          image: undefined,
         },
       },
     },
@@ -124,7 +124,7 @@ const mockPendingMusic: PendingMusic[] = [
       director: {
         user: {
           name: "Tom Weber",
-          image: null,
+          image: undefined,
         },
       },
     },
