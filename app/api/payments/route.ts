@@ -6,7 +6,7 @@ import Stripe from "stripe";
 
 // Stripe initialisieren (nur wenn Key vorhanden)
 const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-12-18.acacia" })
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-02-24.acacia" })
   : null;
 
 const checkoutSchema = z.object({
