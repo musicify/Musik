@@ -1,0 +1,519 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+enum UserRole {
+  CUSTOMER
+  DIRECTOR
+  ADMIN
+}
+
+enum DirectorBadge {
+  VERIFIED
+  TOP_SELLER
+  PREMIUM
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String?   // Hashed password for credentials auth
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  role          UserRole  @default(CUSTOMER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  customerProfile CustomerProfile?
+  directorProfile DirectorProfile?
+  orders        Order[]
+  chats         ChatParticipant[]
+  cartItems     CartItem[]
+  invoices      Invoice[]
+  sentMessages  ChatMessage[] @relation("SentMessages")
+  downloads     Download[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================
+// USER PROFILES
+// ============================================
+
+model CustomerProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DirectorProfile {
+  id              String         @id @default(cuid())
+  userId          String         @unique
+  bio             String?        @db.Text
+  specialization  String[]
+  priceRangeMin   Float?
+  priceRangeMax   Float?
+  badges          DirectorBadge[]
+  isVerified      Boolean        @default(false)
+  isActive        Boolean        @default(true)
+  portfolioTracks String[]       // URLs to portfolio tracks
+  website         String?
+  socialLinks     String[]       // Array of social media links
+  experience      String?        @db.Text
+  equipment       String?        @db.Text
+  languages       String[]       // Languages spoken
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Performance Metrics
+  avgResponseTime    Int?         // in hours
+  completionRate     Float?       // percentage
+  avgDeliveryTime    Int?         // in hours
+  revisionRate       Float?       // percentage
+  totalProjects      Int          @default(0)
+  totalEarnings      Float        @default(0)
+  rating             Float?       // Average rating (1-5)
+  reviewCount        Int          @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  music Music[]
+  orders Order[]
+  verification DirectorVerification?
+}
+
+// ============================================
+// MUSIC CATALOG
+// ============================================
+
+enum LicenseType {
+  PERSONAL
+  COMMERCIAL
+  ENTERPRISE
+  EXCLUSIVE
+}
+
+enum MusicStatus {
+  ACTIVE
+  INACTIVE
+  EXCLUSIVE_SOLD
+}
+
+model Music {
+  id          String       @id @default(cuid())
+  title       String
+  description String       @db.Text
+  duration    Int          // in seconds
+  bpm         Int?         // Beats per minute
+  key         String?      // Musical key (e.g., "C Major")
+  price       Float
+  audioUrl    String       // S3/Cloudinary URL
+  previewUrl  String?      // Preview snippet URL
+  waveformData String?     @db.Text // JSON waveform data for visualization
+  coverImage  String?
+  licenseType LicenseType  @default(COMMERCIAL)
+  status      MusicStatus  @default(ACTIVE)
+  
+  // Pricing per license type
+  pricePersonal    Float?
+  priceCommercial  Float?
+  priceEnterprise  Float?
+  priceExclusive   Float?
+  
+  // Metadata
+  genre       String
+  subgenre    String?
+  style       String?
+  era         String?      // Epoche
+  culture     String?
+  mood        String?      // Stimmung
+  useCase     String?      // Verwendungszweck
+  structure   String?
+  tags        String[]     // Additional searchable tags
+
+  // Relations
+  directorId  String?
+  director    DirectorProfile? @relation(fields: [directorId], references: [id])
+  
+  // Stats
+  playCount   Int          @default(0)
+  purchaseCount Int        @default(0)
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+  invoiceItems InvoiceItem[]
+  downloads   Download[]
+  approval    MusicApproval?
+}
+
+// ============================================
+// CUSTOM MUSIC ORDERS
+// ============================================
+
+enum OrderStatus {
+  PENDING           // Auftrag erstellt, wartet auf Angebot
+  OFFER_PENDING     // Angebot abgegeben, wartet auf Annahme
+  OFFER_ACCEPTED    // Angebot angenommen, Produktion startet
+  IN_PROGRESS       // In Arbeit
+  REVISION_REQUESTED // Revision angefragt
+  READY_FOR_PAYMENT // Fertig, bereit zur Zahlung
+  PAID              // Bezahlt
+  COMPLETED         // Abgeschlossen
+  CANCELLED         // Storniert
+  DISPUTED          // Streitfall
+}
+
+enum PaymentModel {
+  PAY_ON_COMPLETION
+  PARTIAL_PAYMENT
+}
+
+model Order {
+  id          String       @id @default(cuid())
+  orderNumber String       @unique
+  customerId  String
+  directorId  String?
+  status      OrderStatus  @default(PENDING)
+  
+  // Order Details
+  title       String
+  description String       @db.Text
+  requirements String      @db.Text
+  references  String?      @db.Text
+  notes       String?      @db.Text
+  budget      Float?
+  
+  // Filters/Requirements
+  genre       String?
+  subgenre    String?
+  style       String?
+  era         String?
+  culture     String?
+  mood        String?
+  useCase     String?
+  structure   String?
+  
+  // Offer Details
+  offeredPrice    Float?
+  productionTime  Int?      // in days
+  offerAcceptedAt DateTime?
+  paymentModel     PaymentModel @default(PAY_ON_COMPLETION)
+  
+  // Revisions
+  includedRevisions    Int       @default(2)
+  usedRevisions        Int       @default(0)
+  maxRevisions         Int       @default(3)
+  
+  // Final Delivery
+  finalMusicUrl    String?
+  finalMusicId     String?
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  customer    User         @relation(fields: [customerId], references: [id])
+  director    DirectorProfile? @relation(fields: [directorId], references: [id])
+  chat        Chat?
+  orderItems  OrderItem[]
+  invoices    Invoice[]
+  invoiceItems InvoiceItem[]
+  orderHistory OrderHistory[]
+  downloads   Download[]
+  cartItems   CartItem[]
+}
+
+model OrderHistory {
+  id          String   @id @default(cuid())
+  orderId     String
+  status      OrderStatus
+  message     String?  @db.Text
+  changedBy   String   // userId
+  createdAt   DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// CHAT SYSTEM
+// ============================================
+
+model Chat {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order    Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+  participants ChatParticipant[]
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  chatId   String
+  senderId String
+  content  String   @db.Text
+  fileUrl  String?  // For file uploads
+  fileType String?  // audio, image, document, etc.
+  isSystemMessage Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  chat   Chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender User   @relation(fields: [senderId], references: [id], name: "SentMessages")
+}
+
+model ChatParticipant {
+  id        String   @id @default(cuid())
+  chatId   String
+  userId   String
+  joinedAt DateTime @default(now())
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+}
+
+// ============================================
+// SHOPPING CART
+// ============================================
+
+model CartItem {
+  id        String   @id @default(cuid())
+  userId   String
+  musicId   String?
+  orderId   String?  // For custom music orders
+  licenseType LicenseType @default(COMMERCIAL)
+  createdAt DateTime @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  music Music? @relation(fields: [musicId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// PAYMENTS & INVOICES
+// ============================================
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  PAYPAL
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  invoiceNumber String        @unique
+  userId        String
+  orderId       String?
+  amount        Float
+  tax           Float         @default(0)
+  total         Float
+  status        PaymentStatus @default(PENDING)
+  paymentMethod PaymentMethod?
+  stripePaymentId String?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id])
+  order Order? @relation(fields: [orderId], references: [id])
+  items InvoiceItem[]
+}
+
+model InvoiceItem {
+  id        String   @id @default(cuid())
+  invoiceId String
+  musicId   String?
+  orderId   String?
+  description String
+  quantity  Int      @default(1)
+  price     Float
+  total     Float
+  licenseType LicenseType
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  music   Music?  @relation(fields: [musicId], references: [id])
+  order   Order?  @relation(fields: [orderId], references: [id])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  musicId   String
+  licenseType LicenseType
+  price     Float
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  music Music @relation(fields: [musicId], references: [id])
+}
+
+// ============================================
+// DOWNLOADS
+// ============================================
+
+model Download {
+  id          String      @id @default(cuid())
+  userId      String
+  musicId     String?
+  orderId     String?
+  licenseType LicenseType
+  downloadUrl String
+  expiresAt   DateTime?
+  downloadCount Int       @default(0)
+  createdAt   DateTime    @default(now())
+  
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  music Music? @relation(fields: [musicId], references: [id])
+  order Order? @relation(fields: [orderId], references: [id])
+}
+
+// ============================================
+// MUSIC APPROVAL (Admin)
+// ============================================
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model MusicApproval {
+  id        String         @id @default(cuid())
+  musicId   String         @unique
+  status    ApprovalStatus @default(PENDING)
+  reviewedBy String?
+  reviewNote String?       @db.Text
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  
+  music Music @relation(fields: [musicId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// DIRECTOR VERIFICATION
+// ============================================
+
+model DirectorVerification {
+  id              String         @id @default(cuid())
+  directorId      String         @unique
+  status          ApprovalStatus @default(PENDING)
+  portfolioReview String?        @db.Text
+  reviewedBy      String?
+  reviewNote      String?        @db.Text
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  director DirectorProfile @relation(fields: [directorId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// SUPPORT TICKETS / DISPUTES
+// ============================================
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketType {
+  GENERAL
+  DISPUTE
+  REFUND
+  TECHNICAL
+  OTHER
+}
+
+model SupportTicket {
+  id          String       @id @default(cuid())
+  ticketNumber String      @unique
+  userId      String
+  orderId     String?
+  type        TicketType   @default(GENERAL)
+  status      TicketStatus @default(OPEN)
+  subject     String
+  description String       @db.Text
+  assignedTo  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  messages    TicketMessage[]
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  senderId  String
+  content   String   @db.Text
+  isAdmin   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+
