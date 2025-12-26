@@ -1,48 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, handleApiError } from "@/lib/api/auth-helper";
 
-// POST - Accept offer (Customer only)
+// POST - Angebot annehmen (Customer)
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const userId = req.headers.get("x-user-id");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 }
-      );
+    const authResult = await requireAuth();
+    if (authResult.error) {
+      return authResult.error;
     }
 
-    const order = await db.order.findUnique({
-      where: { id },
-      include: {
-        chat: true,
-        director: {
-          include: {
-            user: true,
-          },
-        },
-      },
-    });
+    const user = authResult.user;
+    const { id } = await params;
+    const supabase = await createClient();
 
-    if (!order) {
+    // Prüfe ob Bestellung existiert und dem Customer gehört
+    const { data: order, error: findError } = await supabase
+      .from("orders")
+      .select("id, customer_id, status, offered_price, director_id")
+      .eq("id", id)
+      .single();
+
+    if (findError || !order) {
       return NextResponse.json(
-        { error: "Auftrag nicht gefunden" },
+        { error: "Bestellung nicht gefunden" },
         { status: 404 }
       );
     }
 
-    if (order.customerId !== userId) {
+    if (order.customer_id !== user.id) {
       return NextResponse.json(
         { error: "Keine Berechtigung" },
         { status: 403 }
       );
     }
 
+    // Nur OFFER_PENDING Aufträge können angenommen werden
     if (order.status !== "OFFER_PENDING") {
       return NextResponse.json(
         { error: "Kein Angebot zum Annehmen vorhanden" },
@@ -50,46 +46,52 @@ export async function POST(
       );
     }
 
-    // Update order
-    const updatedOrder = await db.order.update({
-      where: { id },
-      data: {
+    // Bestellung aktualisieren
+    const { data: updated, error: updateError } = await supabase
+      .from("orders")
+      .update({
         status: "OFFER_ACCEPTED",
-        offerAcceptedAt: new Date(),
-      },
+        offer_accepted_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (updateError) {
+      return NextResponse.json(
+        { error: "Fehler beim Annehmen des Angebots" },
+        { status: 500 }
+      );
+    }
+
+    // History-Eintrag
+    await supabase.from("order_history").insert({
+      order_id: id,
+      status: "OFFER_ACCEPTED",
+      message: `Angebot über €${order.offered_price} angenommen`,
+      changed_by: user.id,
     });
 
-    // Add system message to chat
-    if (order.chat) {
-      await db.chatMessage.create({
-        data: {
-          chatId: order.chat.id,
-          senderId: userId,
-          content: "✅ Angebot angenommen! Die Produktion kann beginnen.",
-          isSystemMessage: true,
-        },
+    // Chat-Nachricht
+    const { data: chat } = await supabase
+      .from("chats")
+      .select("id")
+      .eq("order_id", id)
+      .single();
+
+    if (chat) {
+      await supabase.from("chat_messages").insert({
+        chat_id: chat.id,
+        sender_id: user.id,
+        content: "✅ Angebot angenommen! Die Produktion kann beginnen.",
+        is_system_message: true,
       });
     }
 
-    // Log history
-    await db.orderHistory.create({
-      data: {
-        orderId: id,
-        status: "OFFER_ACCEPTED",
-        message: "Angebot angenommen",
-        changedBy: userId,
-      },
-    });
+    // TODO: E-Mail an Director senden
 
-    // TODO: Send email notification to director
-
-    return NextResponse.json(updatedOrder);
+    return NextResponse.json(updated);
   } catch (error) {
-    console.error("Error accepting offer:", error);
-    return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Annehmen des Angebots");
   }
 }
-

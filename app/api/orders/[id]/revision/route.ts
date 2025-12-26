@@ -1,105 +1,137 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, handleApiError } from "@/lib/api/auth-helper";
 import { z } from "zod";
 
 const revisionSchema = z.object({
-  feedback: z.string().min(10, "Bitte beschreibe deine Änderungswünsche genauer"),
+  feedback: z.string().min(10, "Feedback muss mindestens 10 Zeichen haben"),
 });
 
-// POST - Request revision (Customer only)
+// POST - Revision anfordern (Customer)
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const userId = req.headers.get("x-user-id");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 }
-      );
+    const authResult = await requireAuth();
+    if (authResult.error) {
+      return authResult.error;
     }
 
+    const user = authResult.user;
+    const { id } = await params;
     const body = await req.json();
     const validatedData = revisionSchema.parse(body);
 
-    const order = await db.order.findUnique({
-      where: { id },
-      include: {
-        chat: true,
-      },
-    });
+    const supabase = await createClient();
 
-    if (!order) {
+    // Prüfe ob Bestellung existiert und dem Customer gehört
+    const { data: order, error: findError } = await supabase
+      .from("orders")
+      .select("id, customer_id, status, included_revisions, used_revisions, max_revisions")
+      .eq("id", id)
+      .single();
+
+    if (findError || !order) {
       return NextResponse.json(
-        { error: "Auftrag nicht gefunden" },
+        { error: "Bestellung nicht gefunden" },
         { status: 404 }
       );
     }
 
-    if (order.customerId !== userId) {
+    if (order.customer_id !== user.id) {
       return NextResponse.json(
         { error: "Keine Berechtigung" },
         { status: 403 }
       );
     }
 
+    // Nur IN_PROGRESS oder READY_FOR_PAYMENT Aufträge können eine Revision erhalten
     if (!["IN_PROGRESS", "READY_FOR_PAYMENT"].includes(order.status)) {
       return NextResponse.json(
-        { error: "Revision kann in diesem Status nicht angefragt werden" },
+        { error: "Eine Revision kann in diesem Status nicht angefordert werden" },
         { status: 400 }
       );
     }
 
-    // Check if revisions are available
-    if (order.usedRevisions >= order.includedRevisions) {
+    // Prüfe ob noch Revisionen verfügbar
+    const remainingRevisions = order.included_revisions - order.used_revisions;
+    if (remainingRevisions <= 0 && order.used_revisions >= order.max_revisions) {
       return NextResponse.json(
-        { 
-          error: "Alle inkludierten Revisionen wurden aufgebraucht. Kontaktiere den Regisseur für zusätzliche Revisionen.",
-          remainingRevisions: 0,
-        },
+        { error: "Maximale Anzahl an Revisionen erreicht. Bitte kontaktiere den Support." },
         { status: 400 }
       );
     }
 
-    // Update order
-    const updatedOrder = await db.order.update({
-      where: { id },
-      data: {
+    const isPaidRevision = remainingRevisions <= 0;
+
+    // Bestellung aktualisieren
+    const { data: updated, error: updateError } = await supabase
+      .from("orders")
+      .update({
         status: "REVISION_REQUESTED",
-        usedRevisions: { increment: 1 },
-      },
+        used_revisions: order.used_revisions + 1,
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (updateError) {
+      return NextResponse.json(
+        { error: "Fehler beim Anfordern der Revision" },
+        { status: 500 }
+      );
+    }
+
+    // History-Eintrag
+    await supabase.from("order_history").insert({
+      order_id: id,
+      status: "REVISION_REQUESTED",
+      message: isPaidRevision
+        ? `Kostenpflichtige Revision angefordert: ${validatedData.feedback}`
+        : `Revision angefordert (${order.used_revisions + 1}/${order.included_revisions}): ${validatedData.feedback}`,
+      changed_by: user.id,
     });
 
-    const remainingRevisions = order.includedRevisions - order.usedRevisions - 1;
+    // Chat-Nachricht
+    const { data: chat } = await supabase
+      .from("chats")
+      .select("id")
+      .eq("order_id", id)
+      .single();
 
-    // Add system message to chat
-    if (order.chat) {
-      await db.chatMessage.create({
-        data: {
-          chatId: order.chat.id,
-          senderId: userId,
-          content: `🔄 Revision angefragt (${remainingRevisions} verbleibend)\n\nFeedback:\n${validatedData.feedback}`,
-          isSystemMessage: true,
-        },
+    if (chat) {
+      const revisionInfo = isPaidRevision
+        ? "⚠️ Kostenpflichtige Revision angefordert"
+        : `🔄 Revision angefordert (${order.used_revisions + 1}/${order.included_revisions} inkludiert)`;
+
+      await supabase.from("chat_messages").insert({
+        chat_id: chat.id,
+        sender_id: user.id,
+        content: revisionInfo,
+        is_system_message: true,
+      });
+
+      await supabase.from("chat_messages").insert({
+        chat_id: chat.id,
+        sender_id: user.id,
+        content: validatedData.feedback,
+        is_system_message: false,
       });
     }
 
-    // Log history
-    await db.orderHistory.create({
-      data: {
-        orderId: id,
-        status: "REVISION_REQUESTED",
-        message: `Revision ${order.usedRevisions + 1}/${order.includedRevisions}: ${validatedData.feedback.substring(0, 100)}...`,
-        changedBy: userId,
-      },
-    });
+    // Entferne aus Warenkorb falls vorhanden
+    await supabase
+      .from("cart_items")
+      .delete()
+      .eq("order_id", id);
+
+    // TODO: E-Mail an Director senden
 
     return NextResponse.json({
-      ...updatedOrder,
-      remainingRevisions,
+      ...updated,
+      isPaidRevision,
+      remainingFreeRevisions: Math.max(0, order.included_revisions - order.used_revisions - 1),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -108,12 +140,6 @@ export async function POST(
         { status: 400 }
       );
     }
-
-    console.error("Error requesting revision:", error);
-    return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Anfordern der Revision");
   }
 }
-

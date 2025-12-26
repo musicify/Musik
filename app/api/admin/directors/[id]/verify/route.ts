@@ -1,65 +1,88 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { createClient } from "@/lib/supabase/server";
+import { requireAdmin, handleApiError } from "@/lib/api/auth-helper";
 import { z } from "zod";
 
 const verifySchema = z.object({
   approved: z.boolean(),
-  reviewNote: z.string().optional(),
+  note: z.string().optional(),
+  badges: z.array(z.enum(["VERIFIED", "TOP_SELLER", "PREMIUM"])).optional(),
 });
 
-// POST - Verify or reject director (Admin only)
+// POST - Director verifizieren/ablehnen
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: directorId } = await params;
-    const userId = req.headers.get("x-user-id");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 }
-      );
+    const authResult = await requireAdmin();
+    if (authResult.error) {
+      return authResult.error;
     }
 
-    // Check if user is admin
-    const user = await db.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (user?.role !== "ADMIN") {
-      return NextResponse.json(
-        { error: "Keine Berechtigung" },
-        { status: 403 }
-      );
-    }
-
+    const user = authResult.user;
+    const { id } = await params;
     const body = await req.json();
-    const { approved, reviewNote } = verifySchema.parse(body);
+    const validatedData = verifySchema.parse(body);
 
-    // Update verification record
-    const verification = await db.directorVerification.update({
-      where: { directorId },
-      data: {
-        status: approved ? "APPROVED" : "REJECTED",
-        reviewedBy: userId,
-        reviewNote,
-      },
+    const supabase = await createClient();
+
+    // Prüfe ob Director-Profil existiert
+    const { data: directorProfile, error: findError } = await supabase
+      .from("director_profiles")
+      .select("id, user_id")
+      .eq("id", id)
+      .single();
+
+    if (findError || !directorProfile) {
+      return NextResponse.json(
+        { error: "Director nicht gefunden" },
+        { status: 404 }
+      );
+    }
+
+    // Verification-Status aktualisieren
+    await supabase
+      .from("director_verifications")
+      .upsert({
+        director_id: id,
+        status: validatedData.approved ? "APPROVED" : "REJECTED",
+        reviewed_by: user.id,
+        review_note: validatedData.note,
+        updated_at: new Date().toISOString(),
+      });
+
+    // Director-Profil aktualisieren
+    const updateData: any = {
+      is_verified: validatedData.approved,
+    };
+
+    if (validatedData.approved && validatedData.badges) {
+      updateData.badges = validatedData.badges;
+    } else if (validatedData.approved) {
+      updateData.badges = ["VERIFIED"];
+    }
+
+    const { data: updatedProfile, error: updateError } = await supabase
+      .from("director_profiles")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (updateError) {
+      return NextResponse.json(
+        { error: "Fehler beim Aktualisieren" },
+        { status: 500 }
+      );
+    }
+
+    // TODO: E-Mail an Director senden
+
+    return NextResponse.json({
+      message: validatedData.approved ? "Director verifiziert" : "Verifizierung abgelehnt",
+      profile: updatedProfile,
     });
-
-    // Update director profile
-    await db.directorProfile.update({
-      where: { id: directorId },
-      data: {
-        isVerified: approved,
-        badges: approved ? { push: "VERIFIED" } : undefined,
-      },
-    });
-
-    // TODO: Send email notification to director
-
-    return NextResponse.json(verification);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -67,12 +90,6 @@ export async function POST(
         { status: 400 }
       );
     }
-
-    console.error("Error verifying director:", error);
-    return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler bei der Verifizierung");
   }
 }
-

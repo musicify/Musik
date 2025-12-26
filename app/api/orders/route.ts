@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, handleApiError, getDirectorProfile } from "@/lib/api/auth-helper";
 import { z } from "zod";
 
 const createOrderSchema = z.object({
   title: z.string().min(5, "Titel muss mindestens 5 Zeichen haben"),
   description: z.string().min(20, "Beschreibung muss mindestens 20 Zeichen haben"),
-  requirements: z.string(),
+  requirements: z.string().min(10, "Anforderungen müssen mindestens 10 Zeichen haben"),
   references: z.string().optional(),
   notes: z.string().optional(),
   budget: z.number().optional(),
@@ -23,133 +24,232 @@ const createOrderSchema = z.object({
 
 function generateOrderNumber() {
   const year = new Date().getFullYear();
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, "0");
+  const random = Math.floor(Math.random() * 100000).toString().padStart(5, "0");
   return `ORD-${year}-${random}`;
 }
 
-// GET - Get user's orders
+// GET - Bestellungen des Users abrufen
 export async function GET(req: NextRequest) {
   try {
-    // TODO: Get user from session
-    const customerId = req.headers.get("x-user-id"); // Placeholder
+    const authResult = await requireAuth();
+    if (authResult.error) {
+      return authResult.error;
+    }
 
-    if (!customerId) {
+    const user = authResult.user;
+    const { searchParams } = new URL(req.url);
+    const role = searchParams.get("role"); // "customer" oder "director"
+
+    const supabase = await createClient();
+
+    let query = supabase
+      .from("orders")
+      .select(`
+        *,
+        customer:users!orders_customer_id_fkey (
+          id,
+          name,
+          email,
+          image
+        ),
+        director:director_profiles (
+          id,
+          badges,
+          user:users (
+            name,
+            image
+          )
+        ),
+        chat:chats (
+          id,
+          messages:chat_messages (
+            id,
+            content,
+            created_at
+          )
+        )
+      `)
+      .order("created_at", { ascending: false });
+
+    // Je nach Rolle filtern
+    if (role === "director" && user.role === "DIRECTOR") {
+      // Director sieht seine Aufträge
+      const directorProfile = await getDirectorProfile(user.id);
+      if (directorProfile) {
+        query = query.eq("director_id", directorProfile.id);
+      }
+    } else {
+      // Customer sieht seine Aufträge
+      query = query.eq("customer_id", user.id);
+    }
+
+    const { data: orders, error } = await query;
+
+    if (error) {
+      console.error("Orders Error:", error);
       return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 }
+        { error: "Fehler beim Laden der Bestellungen" },
+        { status: 500 }
       );
     }
 
-    const orders = await db.order.findMany({
-      where: { customerId },
-      orderBy: { createdAt: "desc" },
-      include: {
-        director: {
-          include: {
-            user: {
-              select: {
-                name: true,
-                image: true,
-              },
-            },
-          },
-        },
-        chat: {
-          include: {
-            messages: {
-              take: 1,
-              orderBy: { createdAt: "desc" },
-            },
-          },
-        },
-      },
-    });
+    // Transformiere Daten für Frontend
+    const transformedOrders = (orders || []).map((order: any) => ({
+      id: order.id,
+      orderNumber: order.order_number,
+      customerId: order.customer_id,
+      directorId: order.director_id,
+      status: order.status,
+      title: order.title,
+      description: order.description,
+      requirements: order.requirements,
+      references: order.references,
+      notes: order.notes,
+      budget: order.budget,
+      genre: order.genre,
+      subgenre: order.subgenre,
+      style: order.style,
+      era: order.era,
+      culture: order.culture,
+      mood: order.mood,
+      useCase: order.use_case,
+      structure: order.structure,
+      offeredPrice: order.offered_price,
+      productionTime: order.production_time,
+      offerAcceptedAt: order.offer_accepted_at,
+      includedRevisions: order.included_revisions,
+      usedRevisions: order.used_revisions,
+      finalMusicUrl: order.final_music_url,
+      createdAt: order.created_at,
+      updatedAt: order.updated_at,
+      customer: order.customer,
+      director: order.director ? {
+        id: order.director.id,
+        badges: order.director.badges || [],
+        user: order.director.user,
+      } : null,
+      chat: order.chat ? {
+        id: order.chat.id,
+        messages: order.chat.messages?.slice(0, 1) || [],
+      } : null,
+    }));
 
-    return NextResponse.json(orders);
+    return NextResponse.json(transformedOrders);
   } catch (error) {
-    console.error("Error fetching orders:", error);
-    return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Laden der Bestellungen");
   }
 }
 
-// POST - Create new order
+// POST - Neuen Auftrag erstellen
 export async function POST(req: NextRequest) {
   try {
-    // TODO: Get user from session
-    const customerId = req.headers.get("x-user-id"); // Placeholder
-
-    if (!customerId) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 }
-      );
+    const authResult = await requireAuth();
+    if (authResult.error) {
+      return authResult.error;
     }
 
+    const user = authResult.user;
     const body = await req.json();
     const validatedData = createOrderSchema.parse(body);
 
-    // Create order for each selected director
-    const orders = await Promise.all(
-      validatedData.directorIds.map(async (directorId) => {
-        const order = await db.order.create({
-          data: {
-            orderNumber: generateOrderNumber(),
-            customerId,
-            directorId,
-            status: "PENDING",
-            title: validatedData.title,
-            description: validatedData.description,
-            requirements: validatedData.requirements,
-            references: validatedData.references,
-            notes: validatedData.notes,
-            budget: validatedData.budget,
-            genre: validatedData.genre,
-            subgenre: validatedData.subgenre,
-            style: validatedData.style,
-            era: validatedData.era,
-            culture: validatedData.culture,
-            mood: validatedData.mood,
-            useCase: validatedData.useCase,
-            structure: validatedData.structure,
-            paymentModel: validatedData.paymentModel,
-          },
+    const supabase = await createClient();
+
+    // Erstelle Aufträge für jeden ausgewählten Director
+    const createdOrders = [];
+
+    for (const directorId of validatedData.directorIds) {
+      // Prüfe ob Director existiert und verifiziert ist
+      const { data: director, error: directorError } = await supabase
+        .from("director_profiles")
+        .select("id, user_id, is_verified")
+        .eq("id", directorId)
+        .single();
+
+      if (directorError || !director) {
+        continue; // Skip ungültige Directors
+      }
+
+      // Generiere eindeutige Auftragsnummer
+      const orderNumber = generateOrderNumber();
+
+      // Auftrag erstellen
+      const { data: order, error: orderError } = await supabase
+        .from("orders")
+        .insert({
+          order_number: orderNumber,
+          customer_id: user.id,
+          director_id: directorId,
+          status: "PENDING",
+          title: validatedData.title,
+          description: validatedData.description,
+          requirements: validatedData.requirements,
+          references: validatedData.references,
+          notes: validatedData.notes,
+          budget: validatedData.budget,
+          genre: validatedData.genre,
+          subgenre: validatedData.subgenre,
+          style: validatedData.style,
+          era: validatedData.era,
+          culture: validatedData.culture,
+          mood: validatedData.mood,
+          use_case: validatedData.useCase,
+          structure: validatedData.structure,
+          payment_model: validatedData.paymentModel,
+        })
+        .select()
+        .single();
+
+      if (orderError || !order) {
+        console.error("Order Create Error:", orderError);
+        continue;
+      }
+
+      // Chat für den Auftrag erstellen
+      const { data: chat, error: chatError } = await supabase
+        .from("chats")
+        .insert({
+          order_id: order.id,
+        })
+        .select()
+        .single();
+
+      if (!chatError && chat) {
+        // Chat-Teilnehmer hinzufügen
+        await supabase.from("chat_participants").insert([
+          { chat_id: chat.id, user_id: user.id },
+          { chat_id: chat.id, user_id: director.user_id },
+        ]);
+
+        // System-Nachricht für neuen Auftrag
+        await supabase.from("chat_messages").insert({
+          chat_id: chat.id,
+          sender_id: user.id,
+          content: `Neuer Auftrag erstellt: ${validatedData.title}`,
+          is_system_message: true,
         });
+      }
 
-        // Create chat for order
-        await db.chat.create({
-          data: {
-            orderId: order.id,
-            participants: {
-              createMany: {
-                data: [
-                  { userId: customerId },
-                  { userId: (await db.directorProfile.findUnique({ where: { id: directorId } }))?.userId || "" },
-                ],
-              },
-            },
-          },
-        });
+      // Order History erstellen
+      await supabase.from("order_history").insert({
+        order_id: order.id,
+        status: "PENDING",
+        message: "Auftrag erstellt",
+        changed_by: user.id,
+      });
 
-        // Create order history entry
-        await db.orderHistory.create({
-          data: {
-            orderId: order.id,
-            status: "PENDING",
-            message: "Auftrag erstellt",
-            changedBy: customerId,
-          },
-        });
+      createdOrders.push(order);
+    }
 
-        return order;
-      })
-    );
+    if (createdOrders.length === 0) {
+      return NextResponse.json(
+        { error: "Keine Aufträge erstellt. Bitte prüfe die ausgewählten Komponisten." },
+        { status: 400 }
+      );
+    }
 
-    // TODO: Send email notifications to directors
+    // TODO: E-Mail-Benachrichtigung an Directors senden
 
-    return NextResponse.json(orders, { status: 201 });
+    return NextResponse.json(createdOrders, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -157,12 +257,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    console.error("Error creating order:", error);
-    return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Erstellen des Auftrags");
   }
 }
-

@@ -1,163 +1,86 @@
-import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, handleApiError } from "@/lib/api/auth-helper";
 
-// GET /api/downloads - Get all downloads for the current user
-export async function GET() {
+// GET - Downloads des Users abrufen
+export async function GET(req: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    const authResult = await requireAuth();
+    if (authResult.error) {
+      return authResult.error;
+    }
 
-    if (!user) {
+    const user = authResult.user;
+    const supabase = await createClient();
+
+    const { data: downloads, error } = await supabase
+      .from("downloads")
+      .select(`
+        id,
+        license_type,
+        download_url,
+        download_count,
+        expires_at,
+        created_at,
+        music:music_id (
+          id,
+          title,
+          duration,
+          audio_url,
+          cover_image,
+          genre,
+          director:director_profiles (
+            id,
+            user:users (
+              name
+            )
+          )
+        ),
+        order:order_id (
+          id,
+          order_number,
+          title,
+          final_music_url
+        )
+      `)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Downloads Error:", error);
       return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
+        { error: "Fehler beim Laden der Downloads" },
+        { status: 500 }
       );
     }
 
-    const downloads = await db.download.findMany({
-      where: {
-        userId: user.id,
-      },
-      include: {
-        music: {
-          select: {
-            id: true,
-            title: true,
-            coverImage: true,
-            audioUrl: true,
-            director: {
-              select: {
-                user: {
-                  select: {
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-        order: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    // Transformiere Daten
+    const transformedDownloads = (downloads || []).map((download: any) => ({
+      id: download.id,
+      licenseType: download.license_type,
+      downloadUrl: download.download_url,
+      downloadCount: download.download_count,
+      expiresAt: download.expires_at,
+      createdAt: download.created_at,
+      music: download.music ? {
+        id: download.music.id,
+        title: download.music.title,
+        duration: download.music.duration,
+        audioUrl: download.music.audio_url,
+        coverImage: download.music.cover_image,
+        genre: download.music.genre,
+        artist: download.music.director?.user?.name || "Unbekannt",
+      } : null,
+      order: download.order ? {
+        id: download.order.id,
+        orderNumber: download.order.order_number,
+        title: download.order.title,
+        musicUrl: download.order.final_music_url,
+      } : null,
+    }));
 
-    return NextResponse.json(downloads);
+    return NextResponse.json(transformedDownloads);
   } catch (error) {
-    console.error("[DOWNLOADS_GET]", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
-
-// POST /api/downloads - Create a download record and get download URL
-export async function POST(request: Request) {
-  try {
-    const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const body = await request.json();
-    const { musicId, orderId, licenseType } = body;
-
-    if (!musicId && !orderId) {
-      return NextResponse.json(
-        { error: "Music ID or Order ID is required" },
-        { status: 400 }
-      );
-    }
-
-    let downloadUrl = "";
-
-    // Verify user has access to download
-    if (orderId) {
-      const order = await db.order.findFirst({
-        where: {
-          id: orderId,
-          customerId: user.id,
-          status: "COMPLETED",
-        },
-      });
-
-      if (!order) {
-        return NextResponse.json(
-          { error: "Order not found or not completed" },
-          { status: 404 }
-        );
-      }
-      
-      downloadUrl = order.finalMusicUrl || "";
-    }
-
-    if (musicId) {
-      const music = await db.music.findUnique({
-        where: { id: musicId },
-      });
-
-      if (!music) {
-        return NextResponse.json(
-          { error: "Music not found" },
-          { status: 404 }
-        );
-      }
-      
-      downloadUrl = music.audioUrl;
-    }
-
-    // Create download record
-    const download = await db.download.create({
-      data: {
-        userId: user.id,
-        musicId,
-        orderId,
-        licenseType: licenseType || "PERSONAL",
-        downloadUrl,
-      },
-      include: {
-        music: {
-          select: {
-            id: true,
-            title: true,
-            audioUrl: true,
-          },
-        },
-        order: {
-          select: {
-            id: true,
-            title: true,
-            finalMusicUrl: true,
-          },
-        },
-      },
-    });
-
-    // In production, generate a presigned URL for secure downloads
-    // const presignedUrl = await generatePresignedUrl(downloadUrl);
-
-    return NextResponse.json({
-      download,
-      url: downloadUrl,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour expiry
-    });
-  } catch (error) {
-    console.error("[DOWNLOADS_POST]", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Laden der Downloads");
   }
 }

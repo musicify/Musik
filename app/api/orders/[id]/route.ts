@@ -1,180 +1,225 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, handleApiError, getDirectorProfile } from "@/lib/api/auth-helper";
 
-// GET - Get single order by ID
+// GET - Einzelne Bestellung abrufen
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const userId = req.headers.get("x-user-id");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 }
-      );
+    const authResult = await requireAuth();
+    if (authResult.error) {
+      return authResult.error;
     }
 
-    const order = await db.order.findUnique({
-      where: { id },
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          },
-        },
-        director: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true,
-              },
-            },
-          },
-        },
-        chat: {
-          include: {
-            messages: {
-              orderBy: { createdAt: "asc" },
-              include: {
-                sender: {
-                  select: {
-                    id: true,
-                    name: true,
-                    image: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-        orderHistory: {
-          orderBy: { createdAt: "desc" },
-        },
-        invoices: true,
-      },
-    });
+    const user = authResult.user;
+    const { id } = await params;
+    const supabase = await createClient();
 
-    if (!order) {
+    const { data: order, error } = await supabase
+      .from("orders")
+      .select(`
+        *,
+        customer:users!orders_customer_id_fkey (
+          id,
+          name,
+          email,
+          image
+        ),
+        director:director_profiles (
+          id,
+          bio,
+          badges,
+          price_range_min,
+          price_range_max,
+          avg_response_time,
+          completion_rate,
+          rating,
+          user:users (
+            name,
+            image,
+            email
+          )
+        ),
+        chat:chats (
+          id
+        ),
+        history:order_history (
+          id,
+          status,
+          message,
+          changed_by,
+          created_at
+        )
+      `)
+      .eq("id", id)
+      .single();
+
+    if (error || !order) {
       return NextResponse.json(
-        { error: "Auftrag nicht gefunden" },
+        { error: "Bestellung nicht gefunden" },
         { status: 404 }
       );
     }
 
-    // Check if user has access to this order
-    const isCustomer = order.customerId === userId;
-    const isDirector = order.director?.userId === userId;
+    // Prüfe ob User berechtigt ist
+    const directorProfile = user.role === "DIRECTOR" ? await getDirectorProfile(user.id) : null;
+    const isCustomer = order.customer_id === user.id;
+    const isDirector = directorProfile && order.director_id === directorProfile.id;
+    const isAdmin = user.role === "ADMIN";
 
-    if (!isCustomer && !isDirector) {
+    if (!isCustomer && !isDirector && !isAdmin) {
       return NextResponse.json(
         { error: "Keine Berechtigung" },
         { status: 403 }
       );
     }
 
-    return NextResponse.json(order);
+    // Transformiere Daten
+    const transformedOrder = {
+      id: order.id,
+      orderNumber: order.order_number,
+      customerId: order.customer_id,
+      directorId: order.director_id,
+      status: order.status,
+      title: order.title,
+      description: order.description,
+      requirements: order.requirements,
+      references: order.references,
+      notes: order.notes,
+      budget: order.budget,
+      genre: order.genre,
+      subgenre: order.subgenre,
+      style: order.style,
+      era: order.era,
+      culture: order.culture,
+      mood: order.mood,
+      useCase: order.use_case,
+      structure: order.structure,
+      offeredPrice: order.offered_price,
+      productionTime: order.production_time,
+      offerAcceptedAt: order.offer_accepted_at,
+      paymentModel: order.payment_model,
+      includedRevisions: order.included_revisions,
+      usedRevisions: order.used_revisions,
+      maxRevisions: order.max_revisions,
+      finalMusicUrl: order.final_music_url,
+      finalMusicId: order.final_music_id,
+      createdAt: order.created_at,
+      updatedAt: order.updated_at,
+      customer: order.customer,
+      director: order.director ? {
+        id: order.director.id,
+        bio: order.director.bio,
+        badges: order.director.badges || [],
+        priceRangeMin: order.director.price_range_min,
+        priceRangeMax: order.director.price_range_max,
+        avgResponseTime: order.director.avg_response_time,
+        completionRate: order.director.completion_rate,
+        rating: order.director.rating,
+        user: order.director.user,
+      } : null,
+      chatId: order.chat?.id,
+      history: order.history?.map((h: any) => ({
+        id: h.id,
+        status: h.status,
+        message: h.message,
+        changedBy: h.changed_by,
+        createdAt: h.created_at,
+      })) || [],
+    };
+
+    return NextResponse.json(transformedOrder);
   } catch (error) {
-    console.error("Error fetching order:", error);
-    return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Laden der Bestellung");
   }
 }
 
-const updateOrderSchema = z.object({
-  title: z.string().min(5).optional(),
-  description: z.string().optional(),
-  requirements: z.string().optional(),
-  references: z.string().optional(),
-  notes: z.string().optional(),
-  budget: z.number().positive().optional(),
-});
-
-// PUT - Update order (Customer only, before offer accepted)
+// PUT - Bestellung aktualisieren (vor Angebot)
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const userId = req.headers.get("x-user-id");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 }
-      );
+    const authResult = await requireAuth();
+    if (authResult.error) {
+      return authResult.error;
     }
 
+    const user = authResult.user;
+    const { id } = await params;
     const body = await req.json();
-    const validatedData = updateOrderSchema.parse(body);
+    const supabase = await createClient();
 
-    const order = await db.order.findUnique({
-      where: { id },
-    });
+    // Prüfe ob Bestellung existiert und dem User gehört
+    const { data: order, error: findError } = await supabase
+      .from("orders")
+      .select("id, customer_id, status")
+      .eq("id", id)
+      .single();
 
-    if (!order) {
+    if (findError || !order) {
       return NextResponse.json(
-        { error: "Auftrag nicht gefunden" },
+        { error: "Bestellung nicht gefunden" },
         { status: 404 }
       );
     }
 
-    if (order.customerId !== userId) {
+    if (order.customer_id !== user.id) {
       return NextResponse.json(
         { error: "Keine Berechtigung" },
         { status: 403 }
       );
     }
 
-    // Only allow updates before offer is accepted
-    if (!["PENDING", "OFFER_PENDING"].includes(order.status)) {
+    // Nur PENDING Aufträge können bearbeitet werden
+    if (order.status !== "PENDING") {
       return NextResponse.json(
-        { error: "Auftrag kann nach Annahme des Angebots nicht mehr bearbeitet werden" },
+        { error: "Bestellung kann nicht mehr bearbeitet werden" },
         { status: 400 }
       );
     }
 
-    const updatedOrder = await db.order.update({
-      where: { id },
-      data: validatedData,
+    // Update erlaubte Felder
+    const updateData: any = {};
+    const allowedFields = [
+      "title", "description", "requirements", "references", "notes",
+      "budget", "genre", "subgenre", "style", "era", "culture",
+      "mood", "use_case", "structure"
+    ];
+
+    for (const field of allowedFields) {
+      const camelField = field.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+      if (body[camelField] !== undefined) {
+        updateData[field] = body[camelField];
+      }
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from("orders")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (updateError) {
+      return NextResponse.json(
+        { error: "Fehler beim Aktualisieren" },
+        { status: 500 }
+      );
+    }
+
+    // History-Eintrag
+    await supabase.from("order_history").insert({
+      order_id: id,
+      status: "PENDING",
+      message: "Auftrag aktualisiert",
+      changed_by: user.id,
     });
 
-    // Log history
-    await db.orderHistory.create({
-      data: {
-        orderId: id,
-        status: order.status,
-        message: "Auftragsdetails aktualisiert",
-        changedBy: userId,
-      },
-    });
-
-    return NextResponse.json(updatedOrder);
+    return NextResponse.json(updated);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.errors[0].message },
-        { status: 400 }
-      );
-    }
-
-    console.error("Error updating order:", error);
-    return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Aktualisieren");
   }
 }
-

@@ -1,103 +1,132 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { createClient } from "@/lib/supabase/server";
+import { requireDirector, handleApiError, getDirectorProfile } from "@/lib/api/auth-helper";
 import { z } from "zod";
 
 const deliverSchema = z.object({
-  musicUrl: z.string().url("Ungültige URL"),
+  musicUrl: z.string().url("Ungültige Musik-URL"),
   message: z.string().optional(),
 });
 
-// POST - Deliver final music (Director only)
+// POST - Musik liefern (Director)
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const userId = req.headers.get("x-user-id");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 }
-      );
+    const authResult = await requireDirector();
+    if (authResult.error) {
+      return authResult.error;
     }
 
+    const user = authResult.user;
+    const { id } = await params;
     const body = await req.json();
     const validatedData = deliverSchema.parse(body);
 
-    const order = await db.order.findUnique({
-      where: { id },
-      include: {
-        director: true,
-        chat: true,
-      },
-    });
+    const supabase = await createClient();
 
-    if (!order) {
+    // Hole Director-Profil
+    const directorProfile = await getDirectorProfile(user.id);
+    if (!directorProfile) {
       return NextResponse.json(
-        { error: "Auftrag nicht gefunden" },
+        { error: "Director-Profil nicht gefunden" },
         { status: 404 }
       );
     }
 
-    if (order.director?.userId !== userId) {
+    // Prüfe ob Bestellung existiert und dem Director zugewiesen ist
+    const { data: order, error: findError } = await supabase
+      .from("orders")
+      .select("id, director_id, status, customer_id, title")
+      .eq("id", id)
+      .single();
+
+    if (findError || !order) {
+      return NextResponse.json(
+        { error: "Bestellung nicht gefunden" },
+        { status: 404 }
+      );
+    }
+
+    if (order.director_id !== directorProfile.id) {
       return NextResponse.json(
         { error: "Keine Berechtigung" },
         { status: 403 }
       );
     }
 
-    if (!["OFFER_ACCEPTED", "IN_PROGRESS", "REVISION_REQUESTED"].includes(order.status)) {
+    // Nur IN_PROGRESS, OFFER_ACCEPTED oder REVISION_REQUESTED Aufträge können geliefert werden
+    const allowedStatuses = ["IN_PROGRESS", "OFFER_ACCEPTED", "REVISION_REQUESTED"];
+    if (!allowedStatuses.includes(order.status)) {
       return NextResponse.json(
-        { error: "Auftrag kann in diesem Status nicht geliefert werden" },
+        { error: "Bestellung ist nicht im richtigen Status für eine Lieferung" },
         { status: 400 }
       );
     }
 
-    // Update order
-    const updatedOrder = await db.order.update({
-      where: { id },
-      data: {
+    // Bestellung aktualisieren
+    const { data: updated, error: updateError } = await supabase
+      .from("orders")
+      .update({
         status: "READY_FOR_PAYMENT",
-        finalMusicUrl: validatedData.musicUrl,
-      },
+        final_music_url: validatedData.musicUrl,
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (updateError) {
+      return NextResponse.json(
+        { error: "Fehler beim Liefern" },
+        { status: 500 }
+      );
+    }
+
+    // History-Eintrag
+    await supabase.from("order_history").insert({
+      order_id: id,
+      status: "READY_FOR_PAYMENT",
+      message: "Finale Musik geliefert",
+      changed_by: user.id,
     });
 
-    // Add system message to chat
-    if (order.chat) {
-      await db.chatMessage.create({
-        data: {
-          chatId: order.chat.id,
-          senderId: userId,
-          content: `🎵 Finale Musik geliefert!${validatedData.message ? `\n\n${validatedData.message}` : ""}\n\n[Musik abspielen]`,
-          fileUrl: validatedData.musicUrl,
-          fileType: "audio",
-          isSystemMessage: true,
-        },
+    // Chat-Nachricht
+    const { data: chat } = await supabase
+      .from("chats")
+      .select("id")
+      .eq("order_id", id)
+      .single();
+
+    if (chat) {
+      await supabase.from("chat_messages").insert({
+        chat_id: chat.id,
+        sender_id: user.id,
+        content: "🎵 Finale Musik wurde geliefert! Die Musik ist bereit zur Zahlung.",
+        is_system_message: true,
+      });
+
+      // Musik-Datei als Nachricht
+      await supabase.from("chat_messages").insert({
+        chat_id: chat.id,
+        sender_id: user.id,
+        content: validatedData.message || "Hier ist die finale Version!",
+        file_url: validatedData.musicUrl,
+        file_type: "audio",
+        is_system_message: false,
       });
     }
 
-    // Log history
-    await db.orderHistory.create({
-      data: {
-        orderId: id,
-        status: "READY_FOR_PAYMENT",
-        message: "Finale Musik geliefert",
-        changedBy: userId,
-      },
+    // Füge Musik zum Warenkorb hinzu
+    await supabase.from("cart_items").insert({
+      user_id: order.customer_id,
+      order_id: id,
+      license_type: "COMMERCIAL",
     });
 
-    // Add to customer's cart automatically
-    await db.cartItem.create({
-      data: {
-        userId: order.customerId,
-        orderId: id,
-        licenseType: "COMMERCIAL", // Default, can be changed
-      },
-    });
+    // TODO: E-Mail an Kunden senden
 
-    return NextResponse.json(updatedOrder);
+    return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -105,12 +134,6 @@ export async function POST(
         { status: 400 }
       );
     }
-
-    console.error("Error delivering music:", error);
-    return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Liefern");
   }
 }
-

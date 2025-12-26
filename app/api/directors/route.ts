@@ -1,102 +1,136 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { createAdminClient } from "@/lib/supabase/server";
+import { handleApiError } from "@/lib/api/auth-helper";
 import { z } from "zod";
 
 const querySchema = z.object({
   specialization: z.string().optional(),
-  priceMin: z.coerce.number().optional(),
-  priceMax: z.coerce.number().optional(),
-  verified: z.coerce.boolean().optional(),
-  badge: z.enum(["VERIFIED", "TOP_SELLER", "PREMIUM"]).optional(),
-  sortBy: z.enum(["rating", "projects", "price_asc", "price_desc", "newest"]).optional(),
+  verified: z.string().optional(),
+  search: z.string().optional(),
+  sortBy: z.enum(["rating", "projects", "responseTime", "newest"]).optional(),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(20),
 });
 
-// GET - Get all directors (public)
+// GET - Liste aller verifizierten Directors (öffentlich)
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const params = Object.fromEntries(searchParams.entries());
     const validatedParams = querySchema.parse(params);
 
-    const where: any = {
-      isVerified: true,
-      isActive: true,
-    };
+    const supabase = createAdminClient();
 
-    // Apply filters
+    let query = supabase
+      .from("director_profiles")
+      .select(`
+        id,
+        bio,
+        specialization,
+        price_range_min,
+        price_range_max,
+        badges,
+        is_verified,
+        portfolio_tracks,
+        website,
+        social_links,
+        experience,
+        languages,
+        avg_response_time,
+        completion_rate,
+        total_projects,
+        rating,
+        review_count,
+        created_at,
+        user:users (
+          id,
+          name,
+          image,
+          email
+        )
+      `, { count: "exact" })
+      .eq("is_active", true);
+
+    // Nur verifizierte Directors zeigen (wenn nicht explizit anders)
+    if (validatedParams.verified !== "false") {
+      query = query.eq("is_verified", true);
+    }
+
+    // Filter
     if (validatedParams.specialization) {
-      where.specialization = {
-        has: validatedParams.specialization,
-      };
-    }
-    if (validatedParams.priceMin || validatedParams.priceMax) {
-      where.priceRangeMin = {
-        ...(validatedParams.priceMin && { gte: validatedParams.priceMin }),
-      };
-      where.priceRangeMax = {
-        ...(validatedParams.priceMax && { lte: validatedParams.priceMax }),
-      };
-    }
-    if (validatedParams.badge) {
-      where.badges = {
-        has: validatedParams.badge,
-      };
+      query = query.contains("specialization", [validatedParams.specialization]);
     }
 
-    // Sort order
-    let orderBy: any = { rating: "desc" };
+    if (validatedParams.search) {
+      query = query.or(`bio.ilike.%${validatedParams.search}%,user.name.ilike.%${validatedParams.search}%`);
+    }
+
+    // Sortierung
     switch (validatedParams.sortBy) {
+      case "rating":
+        query = query.order("rating", { ascending: false, nullsFirst: false });
+        break;
       case "projects":
-        orderBy = { totalProjects: "desc" };
+        query = query.order("total_projects", { ascending: false });
         break;
-      case "price_asc":
-        orderBy = { priceRangeMin: "asc" };
-        break;
-      case "price_desc":
-        orderBy = { priceRangeMin: "desc" };
+      case "responseTime":
+        query = query.order("avg_response_time", { ascending: true, nullsFirst: false });
         break;
       case "newest":
-        orderBy = { createdAt: "desc" };
-        break;
+      default:
+        query = query.order("created_at", { ascending: false });
     }
 
     // Pagination
-    const skip = (validatedParams.page - 1) * validatedParams.limit;
+    const offset = (validatedParams.page - 1) * validatedParams.limit;
+    query = query.range(offset, offset + validatedParams.limit - 1);
 
-    const [directors, total] = await Promise.all([
-      db.directorProfile.findMany({
-        where,
-        orderBy,
-        skip,
-        take: validatedParams.limit,
-        include: {
-          user: {
-            select: {
-              name: true,
-              image: true,
-              email: true,
-            },
-          },
-        },
-      }),
-      db.directorProfile.count({ where }),
-    ]);
+    const { data: directors, error, count } = await query;
+
+    if (error) {
+      console.error("Directors Error:", error);
+      return NextResponse.json(
+        { error: "Fehler beim Laden der Komponisten" },
+        { status: 500 }
+      );
+    }
+
+    // Transformiere Daten
+    const transformedDirectors = (directors || []).map((director: any) => ({
+      id: director.id,
+      bio: director.bio,
+      specialization: director.specialization || [],
+      priceRangeMin: director.price_range_min,
+      priceRangeMax: director.price_range_max,
+      badges: director.badges || [],
+      isVerified: director.is_verified,
+      portfolioTracks: director.portfolio_tracks || [],
+      website: director.website,
+      socialLinks: director.social_links || [],
+      experience: director.experience,
+      languages: director.languages || [],
+      avgResponseTime: director.avg_response_time,
+      completionRate: director.completion_rate,
+      totalProjects: director.total_projects,
+      rating: director.rating,
+      reviewCount: director.review_count,
+      createdAt: director.created_at,
+      user: director.user ? {
+        id: director.user.id,
+        name: director.user.name,
+        image: director.user.image,
+        email: director.user.email,
+      } : null,
+    }));
 
     return NextResponse.json({
-      data: directors,
-      total,
+      data: transformedDirectors,
+      total: count || 0,
       page: validatedParams.page,
       limit: validatedParams.limit,
-      totalPages: Math.ceil(total / validatedParams.limit),
+      totalPages: Math.ceil((count || 0) / validatedParams.limit),
     });
   } catch (error) {
-    console.error("Error fetching directors:", error);
-    return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Laden der Komponisten");
   }
 }
-

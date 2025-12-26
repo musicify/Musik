@@ -1,119 +1,88 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { createClient } from "@/lib/supabase/server";
+import { requireDirector, handleApiError, getDirectorProfile } from "@/lib/api/auth-helper";
 
-// GET - Get director performance stats
+// GET - Director-Statistiken abrufen
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.headers.get("x-user-id");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 }
-      );
+    const authResult = await requireDirector();
+    if (authResult.error) {
+      return authResult.error;
     }
 
-    const director = await db.directorProfile.findUnique({
-      where: { userId },
-    });
+    const user = authResult.user;
+    const supabase = await createClient();
 
-    if (!director) {
+    // Director-Profil holen
+    const directorProfile = await getDirectorProfile(user.id);
+    if (!directorProfile) {
       return NextResponse.json(
-        { error: "Kein Regisseur-Profil gefunden" },
+        { error: "Director-Profil nicht gefunden" },
         { status: 404 }
       );
     }
 
-    // Get order statistics
-    const allOrders = await db.order.findMany({
-      where: { directorId: director.id },
-      select: {
-        status: true,
-        offeredPrice: true,
-        createdAt: true,
-        offerAcceptedAt: true,
-        usedRevisions: true,
-      },
-    });
+    // Statistiken berechnen
+    
+    // Tracks zählen
+    const { count: totalTracks } = await supabase
+      .from("music")
+      .select("*", { count: "exact", head: true })
+      .eq("director_id", directorProfile.id);
 
-    const completedOrders = allOrders.filter(o => o.status === "COMPLETED");
-    const cancelledOrders = allOrders.filter(o => o.status === "CANCELLED");
-    const totalOrders = allOrders.length;
+    // Track-Verkäufe (Downloads) zählen
+    const { data: musicIds } = await supabase
+      .from("music")
+      .select("id")
+      .eq("director_id", directorProfile.id);
 
-    // Calculate completion rate
-    const completionRate = totalOrders > 0 
-      ? (completedOrders.length / (completedOrders.length + cancelledOrders.length)) * 100 
-      : 0;
+    let trackSales = 0;
+    if (musicIds && musicIds.length > 0) {
+      const { count } = await supabase
+        .from("downloads")
+        .select("*", { count: "exact", head: true })
+        .in("music_id", musicIds.map(m => m.id));
+      trackSales = count || 0;
+    }
 
-    // Calculate total earnings
-    const totalEarnings = completedOrders.reduce((sum, o) => sum + (o.offeredPrice || 0), 0);
+    // Aufträge zählen
+    const { data: orders } = await supabase
+      .from("orders")
+      .select("status, offered_price")
+      .eq("director_id", directorProfile.id);
 
-    // Calculate average response time (placeholder - would need more data)
-    const avgResponseTime = 24; // hours
+    const totalOrders = orders?.length || 0;
+    const activeOrders = orders?.filter(o => 
+      !["COMPLETED", "CANCELLED"].includes(o.status)
+    ).length || 0;
+    const completedOrders = orders?.filter(o => o.status === "COMPLETED").length || 0;
 
-    // Calculate revision rate
-    const totalRevisions = allOrders.reduce((sum, o) => sum + o.usedRevisions, 0);
-    const revisionRate = totalOrders > 0 ? totalRevisions / totalOrders : 0;
+    // Monatliche Einnahmen berechnen (letzten 30 Tage)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Get music stats
-    const musicStats = await db.music.aggregate({
-      where: { directorId: director.id },
-      _sum: {
-        playCount: true,
-        purchaseCount: true,
-      },
-      _count: true,
-    });
+    const { data: recentOrders } = await supabase
+      .from("orders")
+      .select("offered_price, updated_at")
+      .eq("director_id", directorProfile.id)
+      .eq("status", "COMPLETED")
+      .gte("updated_at", thirtyDaysAgo.toISOString());
 
-    // Monthly earnings (last 6 months)
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-    const monthlyOrders = await db.order.findMany({
-      where: {
-        directorId: director.id,
-        status: "COMPLETED",
-        createdAt: { gte: sixMonthsAgo },
-      },
-      select: {
-        offeredPrice: true,
-        createdAt: true,
-      },
-    });
-
-    // Group by month
-    const monthlyEarnings: Record<string, number> = {};
-    monthlyOrders.forEach(order => {
-      const monthKey = order.createdAt.toISOString().substring(0, 7); // YYYY-MM
-      monthlyEarnings[monthKey] = (monthlyEarnings[monthKey] || 0) + (order.offeredPrice || 0);
-    });
+    const monthlyEarnings = recentOrders?.reduce((sum, o) => sum + (o.offered_price || 0), 0) || 0;
 
     return NextResponse.json({
-      overview: {
-        totalOrders,
-        completedOrders: completedOrders.length,
-        activeOrders: allOrders.filter(o => !["COMPLETED", "CANCELLED"].includes(o.status)).length,
-        totalEarnings,
-        completionRate: Math.round(completionRate),
-        avgResponseTime,
-        revisionRate: Math.round(revisionRate * 100) / 100,
-      },
-      music: {
-        totalTracks: musicStats._count,
-        totalPlays: musicStats._sum.playCount || 0,
-        totalPurchases: musicStats._sum.purchaseCount || 0,
-      },
+      totalEarnings: directorProfile.total_earnings || 0,
       monthlyEarnings,
-      badges: director.badges,
-      rating: director.rating,
-      reviewCount: director.reviewCount,
+      totalOrders,
+      activeOrders,
+      completedOrders,
+      avgRating: directorProfile.rating || 0,
+      totalTracks: totalTracks || 0,
+      trackSales,
+      avgResponseTime: directorProfile.avg_response_time,
+      completionRate: directorProfile.completion_rate,
     });
   } catch (error) {
-    console.error("Error fetching stats:", error);
-    return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Laden der Statistiken");
   }
 }
-

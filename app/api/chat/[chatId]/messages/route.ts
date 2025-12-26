@@ -1,140 +1,205 @@
-import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, handleApiError } from "@/lib/api/auth-helper";
+import { z } from "zod";
 
-// GET /api/chat/[chatId]/messages - Get all messages in a chat
+const sendMessageSchema = z.object({
+  content: z.string().min(1, "Nachricht darf nicht leer sein"),
+  fileUrl: z.string().url().optional(),
+  fileType: z.string().optional(),
+});
+
+// GET - Nachrichten abrufen
 export async function GET(
-  request: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+    const authResult = await requireAuth();
+    if (authResult.error) {
+      return authResult.error;
     }
 
+    const user = authResult.user;
     const { chatId } = await params;
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "50");
 
-    // Check if user is a participant
-    const participant = await db.chatParticipant.findFirst({
-      where: {
-        chatId,
-        userId: user.id
-      }
-    });
+    const supabase = await createClient();
 
-    if (!participant) {
+    // Prüfe ob User Teilnehmer des Chats ist
+    const { data: participant, error: participantError } = await supabase
+      .from("chat_participants")
+      .select("id")
+      .eq("chat_id", chatId)
+      .eq("user_id", user.id)
+      .single();
+
+    if ((participantError || !participant) && user.role !== "ADMIN") {
       return NextResponse.json(
-        { error: "Not a participant of this chat" },
+        { error: "Keine Berechtigung" },
         { status: 403 }
       );
     }
 
-    const messages = await db.chatMessage.findMany({
-      where: {
-        chatId
-      },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            name: true,
-            image: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'asc'
-      }
-    });
+    // Nachrichten laden
+    const offset = (page - 1) * limit;
+    const { data: messages, error, count } = await supabase
+      .from("chat_messages")
+      .select(`
+        id,
+        content,
+        file_url,
+        file_type,
+        is_system_message,
+        created_at,
+        sender:users!chat_messages_sender_id_fkey (
+          id,
+          name,
+          image
+        )
+      `, { count: "exact" })
+      .eq("chat_id", chatId)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
 
-    return NextResponse.json(messages);
+    if (error) {
+      console.error("Messages Error:", error);
+      return NextResponse.json(
+        { error: "Fehler beim Laden der Nachrichten" },
+        { status: 500 }
+      );
+    }
+
+    // Transformiere und kehre Reihenfolge um (neueste zuletzt)
+    const transformedMessages = (messages || []).reverse().map((msg: any) => ({
+      id: msg.id,
+      chatId: chatId,
+      senderId: msg.sender?.id,
+      content: msg.content,
+      fileUrl: msg.file_url,
+      fileType: msg.file_type,
+      isSystemMessage: msg.is_system_message,
+      createdAt: msg.created_at,
+      sender: msg.sender ? {
+        id: msg.sender.id,
+        name: msg.sender.name,
+        image: msg.sender.image,
+      } : null,
+    }));
+
+    return NextResponse.json({
+      messages: transformedMessages,
+      hasMore: (count || 0) > offset + limit,
+      total: count || 0,
+    });
   } catch (error) {
-    console.error("[CHAT_MESSAGES_GET]", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Laden der Nachrichten");
   }
 }
 
-// POST /api/chat/[chatId]/messages - Send a message
+// POST - Nachricht senden
 export async function POST(
-  request: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+    const authResult = await requireAuth();
+    if (authResult.error) {
+      return authResult.error;
     }
 
+    const user = authResult.user;
     const { chatId } = await params;
-    const body = await request.json();
-    const { content, fileUrl, fileType } = body;
+    const body = await req.json();
+    const validatedData = sendMessageSchema.parse(body);
 
-    if (!content && !fileUrl) {
+    const supabase = await createClient();
+
+    // Prüfe ob User Teilnehmer des Chats ist
+    const { data: participant, error: participantError } = await supabase
+      .from("chat_participants")
+      .select("id")
+      .eq("chat_id", chatId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (participantError || !participant) {
       return NextResponse.json(
-        { error: "Content or file is required" },
-        { status: 400 }
-      );
-    }
-
-    // Check if user is a participant
-    const participant = await db.chatParticipant.findFirst({
-      where: {
-        chatId,
-        userId: user.id
-      }
-    });
-
-    if (!participant) {
-      return NextResponse.json(
-        { error: "Not a participant of this chat" },
+        { error: "Keine Berechtigung" },
         { status: 403 }
       );
     }
 
-    // Create the message
-    const message = await db.chatMessage.create({
-      data: {
-        chatId,
-        senderId: user.id,
-        content: content || "",
-        fileUrl,
-        fileType
-      },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            name: true,
-            image: true
-          }
-        }
-      }
-    });
+    // Nachricht erstellen
+    const { data: message, error: createError } = await supabase
+      .from("chat_messages")
+      .insert({
+        chat_id: chatId,
+        sender_id: user.id,
+        content: validatedData.content,
+        file_url: validatedData.fileUrl,
+        file_type: validatedData.fileType,
+        is_system_message: false,
+      })
+      .select(`
+        id,
+        content,
+        file_url,
+        file_type,
+        is_system_message,
+        created_at,
+        sender:users!chat_messages_sender_id_fkey (
+          id,
+          name,
+          image
+        )
+      `)
+      .single();
 
-    // Update chat's updatedAt
-    await db.chat.update({
-      where: { id: chatId },
-      data: { updatedAt: new Date() }
-    });
+    if (createError || !message) {
+      console.error("Create Message Error:", createError);
+      return NextResponse.json(
+        { error: "Fehler beim Senden der Nachricht" },
+        { status: 500 }
+      );
+    }
 
-    return NextResponse.json(message, { status: 201 });
+    // Chat aktualisieren für "zuletzt geändert"
+    await supabase
+      .from("chats")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", chatId);
+
+    // Transformiere
+    const transformedMessage = {
+      id: message.id,
+      chatId: chatId,
+      senderId: user.id,
+      content: message.content,
+      fileUrl: message.file_url,
+      fileType: message.file_type,
+      isSystemMessage: message.is_system_message,
+      createdAt: message.created_at,
+      sender: message.sender ? {
+        id: (message.sender as any).id,
+        name: (message.sender as any).name,
+        image: (message.sender as any).image,
+      } : null,
+    };
+
+    // TODO: WebSocket/Pusher für Echtzeit-Updates
+    // TODO: Push-Benachrichtigung senden
+
+    return NextResponse.json(transformedMessage, { status: 201 });
   } catch (error) {
-    console.error("[CHAT_MESSAGES_POST]", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: error.errors[0].message },
+        { status: 400 }
+      );
+    }
+    return handleApiError(error, "Fehler beim Senden der Nachricht");
   }
 }

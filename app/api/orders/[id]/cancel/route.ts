@@ -1,130 +1,133 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, handleApiError, getDirectorProfile } from "@/lib/api/auth-helper";
 import { z } from "zod";
 
 const cancelSchema = z.object({
-  reason: z.string().min(5, "Bitte gib einen Grund für die Stornierung an"),
+  reason: z.string().optional(),
 });
 
-// POST - Cancel order
+// POST - Auftrag stornieren
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const userId = req.headers.get("x-user-id");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 }
-      );
+    const authResult = await requireAuth();
+    if (authResult.error) {
+      return authResult.error;
     }
 
+    const user = authResult.user;
+    const { id } = await params;
     const body = await req.json();
     const validatedData = cancelSchema.parse(body);
 
-    const order = await db.order.findUnique({
-      where: { id },
-      include: {
-        director: true,
-        chat: true,
-      },
-    });
+    const supabase = await createClient();
 
-    if (!order) {
+    // Prüfe ob Bestellung existiert
+    const { data: order, error: findError } = await supabase
+      .from("orders")
+      .select("id, customer_id, director_id, status")
+      .eq("id", id)
+      .single();
+
+    if (findError || !order) {
       return NextResponse.json(
-        { error: "Auftrag nicht gefunden" },
+        { error: "Bestellung nicht gefunden" },
         { status: 404 }
       );
     }
 
-    // Check if user is customer or director
-    const isCustomer = order.customerId === userId;
-    const isDirector = order.director?.userId === userId;
+    // Prüfe Berechtigung (Customer, Director oder Admin)
+    const directorProfile = user.role === "DIRECTOR" ? await getDirectorProfile(user.id) : null;
+    const isCustomer = order.customer_id === user.id;
+    const isDirector = directorProfile && order.director_id === directorProfile.id;
+    const isAdmin = user.role === "ADMIN";
 
-    if (!isCustomer && !isDirector) {
+    if (!isCustomer && !isDirector && !isAdmin) {
       return NextResponse.json(
         { error: "Keine Berechtigung" },
         { status: 403 }
       );
     }
 
-    // Check if order can be cancelled
-    const nonCancellableStatuses = ["COMPLETED", "CANCELLED", "PAID"];
-    if (nonCancellableStatuses.includes(order.status)) {
+    // Stornierungsregeln je nach Status
+    const cancelableStatuses = ["PENDING", "OFFER_PENDING"];
+    const cancelableWithPenalty = ["OFFER_ACCEPTED", "IN_PROGRESS"];
+
+    if (!cancelableStatuses.includes(order.status) && !cancelableWithPenalty.includes(order.status) && !isAdmin) {
       return NextResponse.json(
-        { error: "Dieser Auftrag kann nicht mehr storniert werden" },
+        { error: "Diese Bestellung kann nicht mehr storniert werden" },
         { status: 400 }
       );
     }
 
-    // Determine cancellation policy
-    let refundInfo = "";
-    if (order.status === "PENDING" || order.status === "OFFER_PENDING") {
-      refundInfo = "Keine Kosten entstanden.";
-    } else if (order.status === "OFFER_ACCEPTED" || order.status === "IN_PROGRESS") {
+    // Bestimme ob Rückerstattung/Gebühr anfällt
+    let cancelMessage = validatedData.reason || "Storniert";
+    let refundNote = "";
+
+    if (cancelableWithPenalty.includes(order.status)) {
       if (isCustomer) {
-        refundInfo = "Eine Anzahlung kann je nach Fortschritt einbehalten werden.";
-      } else {
-        refundInfo = "Der Kunde erhält eine vollständige Rückerstattung.";
+        refundNote = " (Anzahlung kann einbehalten werden)";
+      } else if (isDirector) {
+        refundNote = " (Vollständige Rückerstattung an Kunden)";
       }
     }
 
-    // Update order
-    const updatedOrder = await db.order.update({
-      where: { id },
-      data: {
+    // Bestellung aktualisieren
+    const { data: updated, error: updateError } = await supabase
+      .from("orders")
+      .update({
         status: "CANCELLED",
-      },
-    });
+      })
+      .eq("id", id)
+      .select()
+      .single();
 
-    // Add system message to chat
-    if (order.chat) {
-      const cancelledBy = isCustomer ? "Kunde" : "Regisseur";
-      await db.chatMessage.create({
-        data: {
-          chatId: order.chat.id,
-          senderId: userId,
-          content: `❌ Auftrag storniert von ${cancelledBy}\n\nGrund: ${validatedData.reason}\n\n${refundInfo}`,
-          isSystemMessage: true,
-        },
-      });
-    }
-
-    // Log history
-    await db.orderHistory.create({
-      data: {
-        orderId: id,
-        status: "CANCELLED",
-        message: `Storniert: ${validatedData.reason}`,
-        changedBy: userId,
-      },
-    });
-
-    // Remove from cart if present
-    await db.cartItem.deleteMany({
-      where: { orderId: id },
-    });
-
-    return NextResponse.json({
-      ...updatedOrder,
-      refundInfo,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
+    if (updateError) {
       return NextResponse.json(
-        { error: error.errors[0].message },
-        { status: 400 }
+        { error: "Fehler beim Stornieren" },
+        { status: 500 }
       );
     }
 
-    console.error("Error cancelling order:", error);
-    return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    );
+    // History-Eintrag
+    await supabase.from("order_history").insert({
+      order_id: id,
+      status: "CANCELLED",
+      message: cancelMessage + refundNote,
+      changed_by: user.id,
+    });
+
+    // Aus Warenkorb entfernen
+    await supabase
+      .from("cart_items")
+      .delete()
+      .eq("order_id", id);
+
+    // Chat-Nachricht
+    const { data: chat } = await supabase
+      .from("chats")
+      .select("id")
+      .eq("order_id", id)
+      .single();
+
+    if (chat) {
+      const cancelledBy = isCustomer ? "Kunde" : isDirector ? "Komponist" : "Admin";
+      await supabase.from("chat_messages").insert({
+        chat_id: chat.id,
+        sender_id: user.id,
+        content: `❌ Auftrag wurde storniert von ${cancelledBy}.${validatedData.reason ? `\nGrund: ${validatedData.reason}` : ""}${refundNote}`,
+        is_system_message: true,
+      });
+    }
+
+    // TODO: E-Mail-Benachrichtigungen senden
+    // TODO: Rückerstattung verarbeiten wenn nötig
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    return handleApiError(error, "Fehler beim Stornieren");
   }
 }
-

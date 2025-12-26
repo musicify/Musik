@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from "react";
-import { cartApi, CartItem, CartResponse, LicenseType } from "@/lib/api/client";
+import { cartApi, CartItem, CartResponse, LicenseType } from "@/lib/api";
 import { toast } from "sonner";
 
 interface CartContextType {

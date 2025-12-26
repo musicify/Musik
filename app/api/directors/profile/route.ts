@@ -1,120 +1,142 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { createClient } from "@/lib/supabase/server";
+import { requireDirector, handleApiError, getDirectorProfile } from "@/lib/api/auth-helper";
 import { z } from "zod";
 
-// GET - Get own director profile
+const updateProfileSchema = z.object({
+  bio: z.string().max(2000).optional(),
+  specialization: z.array(z.string()).optional(),
+  priceRangeMin: z.number().min(0).optional(),
+  priceRangeMax: z.number().min(0).optional(),
+  website: z.string().url().optional().nullable(),
+  socialLinks: z.array(z.string().url()).optional(),
+  experience: z.string().max(2000).optional(),
+  equipment: z.string().max(1000).optional(),
+  languages: z.array(z.string()).optional(),
+  portfolioTracks: z.array(z.string().url()).optional(),
+});
+
+// GET - Eigenes Director-Profil abrufen
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.headers.get("x-user-id");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 }
-      );
+    const authResult = await requireDirector();
+    if (authResult.error) {
+      return authResult.error;
     }
 
-    const director = await db.directorProfile.findUnique({
-      where: { userId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          },
-        },
-        verification: true,
-      },
-    });
+    const user = authResult.user;
+    const supabase = await createClient();
 
-    if (!director) {
+    const { data: profile, error } = await supabase
+      .from("director_profiles")
+      .select(`
+        *,
+        user:users (
+          id,
+          name,
+          email,
+          image
+        )
+      `)
+      .eq("user_id", user.id)
+      .single();
+
+    if (error || !profile) {
       return NextResponse.json(
-        { error: "Kein Regisseur-Profil gefunden" },
+        { error: "Profil nicht gefunden" },
         { status: 404 }
       );
     }
 
-    // Get recent orders
-    const recentOrders = await db.order.findMany({
-      where: { directorId: director.id },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      include: {
-        customer: {
-          select: {
-            name: true,
-            image: true,
-          },
-        },
-      },
-    });
+    // Transformiere Daten
+    const transformedProfile = {
+      id: profile.id,
+      userId: profile.user_id,
+      bio: profile.bio,
+      specialization: profile.specialization || [],
+      priceRangeMin: profile.price_range_min,
+      priceRangeMax: profile.price_range_max,
+      badges: profile.badges || [],
+      isVerified: profile.is_verified,
+      isActive: profile.is_active,
+      portfolioTracks: profile.portfolio_tracks || [],
+      website: profile.website,
+      socialLinks: profile.social_links || [],
+      experience: profile.experience,
+      equipment: profile.equipment,
+      languages: profile.languages || [],
+      avgResponseTime: profile.avg_response_time,
+      completionRate: profile.completion_rate,
+      avgDeliveryTime: profile.avg_delivery_time,
+      revisionRate: profile.revision_rate,
+      totalProjects: profile.total_projects,
+      totalEarnings: profile.total_earnings,
+      rating: profile.rating,
+      reviewCount: profile.review_count,
+      createdAt: profile.created_at,
+      updatedAt: profile.updated_at,
+      user: profile.user,
+    };
 
-    // Get music
-    const music = await db.music.findMany({
-      where: { directorId: director.id },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return NextResponse.json({
-      ...director,
-      recentOrders,
-      music,
-    });
+    return NextResponse.json(transformedProfile);
   } catch (error) {
-    console.error("Error fetching profile:", error);
-    return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Laden des Profils");
   }
 }
 
-const updateProfileSchema = z.object({
-  bio: z.string().optional(),
-  specialization: z.array(z.string()).optional(),
-  priceRangeMin: z.number().positive().optional(),
-  priceRangeMax: z.number().positive().optional(),
-  website: z.string().url().optional().nullable(),
-  socialLinks: z.array(z.string()).optional(),
-  experience: z.string().optional(),
-  equipment: z.string().optional(),
-  languages: z.array(z.string()).optional(),
-});
-
-// PUT - Update own director profile
+// PUT - Director-Profil aktualisieren
 export async function PUT(req: NextRequest) {
   try {
-    const userId = req.headers.get("x-user-id");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 }
-      );
+    const authResult = await requireDirector();
+    if (authResult.error) {
+      return authResult.error;
     }
 
+    const user = authResult.user;
     const body = await req.json();
     const validatedData = updateProfileSchema.parse(body);
 
-    const director = await db.directorProfile.findUnique({
-      where: { userId },
-    });
+    const supabase = await createClient();
 
-    if (!director) {
+    // Prüfe ob Profil existiert
+    const existingProfile = await getDirectorProfile(user.id);
+    if (!existingProfile) {
       return NextResponse.json(
-        { error: "Kein Regisseur-Profil gefunden" },
+        { error: "Profil nicht gefunden" },
         { status: 404 }
       );
     }
 
-    const updatedDirector = await db.directorProfile.update({
-      where: { userId },
-      data: validatedData,
-    });
+    // Update-Daten vorbereiten (snake_case für Supabase)
+    const updateData: Record<string, any> = {};
+    
+    if (validatedData.bio !== undefined) updateData.bio = validatedData.bio;
+    if (validatedData.specialization !== undefined) updateData.specialization = validatedData.specialization;
+    if (validatedData.priceRangeMin !== undefined) updateData.price_range_min = validatedData.priceRangeMin;
+    if (validatedData.priceRangeMax !== undefined) updateData.price_range_max = validatedData.priceRangeMax;
+    if (validatedData.website !== undefined) updateData.website = validatedData.website;
+    if (validatedData.socialLinks !== undefined) updateData.social_links = validatedData.socialLinks;
+    if (validatedData.experience !== undefined) updateData.experience = validatedData.experience;
+    if (validatedData.equipment !== undefined) updateData.equipment = validatedData.equipment;
+    if (validatedData.languages !== undefined) updateData.languages = validatedData.languages;
+    if (validatedData.portfolioTracks !== undefined) updateData.portfolio_tracks = validatedData.portfolioTracks;
 
-    return NextResponse.json(updatedDirector);
+    const { data: profile, error } = await supabase
+      .from("director_profiles")
+      .update(updateData)
+      .eq("user_id", user.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Update Error:", error);
+      return NextResponse.json(
+        { error: "Fehler beim Aktualisieren des Profils" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(profile);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -122,12 +144,6 @@ export async function PUT(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    console.error("Error updating profile:", error);
-    return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Aktualisieren des Profils");
   }
 }
-

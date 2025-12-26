@@ -1,146 +1,81 @@
-import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, handleApiError } from "@/lib/api/auth-helper";
 
-// GET /api/invoices - Get all invoices for the current user
-export async function GET(request: Request) {
+// GET - Rechnungen des Users abrufen
+export async function GET(req: NextRequest) {
   try {
-    const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+    const authResult = await requireAuth();
+    if (authResult.error) {
+      return authResult.error;
     }
 
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    const user = authResult.user;
+    const supabase = await createClient();
 
-    const where = { userId: user.id };
-
-    const [invoices, total] = await Promise.all([
-      db.invoice.findMany({
-        where,
-        include: {
-          items: true,
-          order: {
-            select: {
-              id: true,
-              title: true,
-            },
-          },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      db.invoice.count({ where }),
-    ]);
-
-    return NextResponse.json({
-      invoices,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
-    });
-  } catch (error) {
-    console.error("[INVOICES_GET]", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
-
-// POST /api/invoices - Create an invoice for an order
-export async function POST(request: Request) {
-  try {
-    const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const body = await request.json();
-    const { orderId, items } = body;
-
-    if (!orderId) {
-      return NextResponse.json(
-        { error: "Order ID is required" },
-        { status: 400 }
-      );
-    }
-
-    // Get the order
-    const order = await db.order.findUnique({
-      where: { id: orderId },
-    });
-
-    if (!order) {
-      return NextResponse.json(
-        { error: "Order not found" },
-        { status: 404 }
-      );
-    }
-
-    // Generate invoice number
-    const invoiceCount = await db.invoice.count();
-    const invoiceNumber = `INV-${new Date().getFullYear()}-${String(invoiceCount + 1).padStart(5, '0')}`;
-
-    // Calculate totals
-    const invoiceItems = items || [{
-      description: order.title,
-      quantity: 1,
-      price: order.offeredPrice || order.budget || 0,
-      total: order.offeredPrice || order.budget || 0,
-      licenseType: "COMMERCIAL",
-    }];
-
-    const subtotal = invoiceItems.reduce((sum: number, item: any) => sum + item.total, 0);
-    const tax = subtotal * 0.19; // 19% German VAT
-    const total = subtotal + tax;
-
-    // Create invoice
-    const invoice = await db.invoice.create({
-      data: {
-        invoiceNumber,
-        orderId,
-        userId: user.id,
-        amount: subtotal,
+    const { data: invoices, error } = await supabase
+      .from("invoices")
+      .select(`
+        id,
+        invoice_number,
+        amount,
         tax,
         total,
-        status: 'PENDING',
-        items: {
-          create: invoiceItems.map((item: any) => ({
-            description: item.description,
-            quantity: item.quantity,
-            price: item.price,
-            total: item.total,
-            licenseType: item.licenseType || "COMMERCIAL",
-          })),
-        },
-      },
-      include: {
-        items: true,
-      },
-    });
+        status,
+        payment_method,
+        paid_at,
+        created_at,
+        items:invoice_items (
+          id,
+          description,
+          price,
+          total,
+          license_type,
+          music:music_id (
+            id,
+            title
+          ),
+          order:order_id (
+            id,
+            title
+          )
+        )
+      `)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
-    return NextResponse.json(invoice, { status: 201 });
+    if (error) {
+      console.error("Invoices Error:", error);
+      return NextResponse.json(
+        { error: "Fehler beim Laden der Rechnungen" },
+        { status: 500 }
+      );
+    }
+
+    // Transformiere Daten
+    const transformedInvoices = (invoices || []).map((invoice: any) => ({
+      id: invoice.id,
+      invoiceNumber: invoice.invoice_number,
+      amount: invoice.amount,
+      tax: invoice.tax,
+      total: invoice.total,
+      status: invoice.status,
+      paymentMethod: invoice.payment_method,
+      paidAt: invoice.paid_at,
+      createdAt: invoice.created_at,
+      items: (invoice.items || []).map((item: any) => ({
+        id: item.id,
+        description: item.description,
+        price: item.price,
+        total: item.total,
+        licenseType: item.license_type,
+        musicTitle: item.music?.title,
+        orderTitle: item.order?.title,
+      })),
+    }));
+
+    return NextResponse.json(transformedInvoices);
   } catch (error) {
-    console.error("[INVOICES_POST]", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Laden der Rechnungen");
   }
 }

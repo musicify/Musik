@@ -1,134 +1,90 @@
-import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { requireAdmin, handleApiError } from "@/lib/api/auth-helper";
 
-// GET /api/admin/stats - Get admin dashboard statistics
-export async function GET() {
+// GET - Admin-Statistiken abrufen
+export async function GET(req: NextRequest) {
   try {
-    await requireAdmin();
+    const authResult = await requireAdmin();
+    if (authResult.error) {
+      return authResult.error;
+    }
 
-    // Get date ranges
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    const supabase = await createClient();
 
-    // Parallel queries for statistics
+    // Parallele Abfragen für Statistiken
     const [
-      totalUsers,
-      totalDirectors,
-      totalCustomers,
-      totalMusic,
-      totalOrders,
-      completedOrders,
-      newUsersThisMonth,
-      newUsersLastMonth,
-      ordersThisMonth,
-      ordersLastMonth,
+      usersResult,
+      directorsResult,
+      ordersResult,
+      pendingDirectorsResult,
+      pendingMusicResult,
+      disputesResult,
+      invoicesResult,
     ] = await Promise.all([
-      // User counts
-      db.user.count(),
-      db.user.count({ where: { role: "DIRECTOR" } }),
-      db.user.count({ where: { role: "CUSTOMER" } }),
-
-      // Music counts
-      db.music.count(),
-
-      // Order counts
-      db.order.count(),
-      db.order.count({ where: { status: "COMPLETED" } }),
-
-      // New users this month
-      db.user.count({
-        where: { createdAt: { gte: startOfMonth } },
-      }),
-      // New users last month
-      db.user.count({
-        where: {
-          createdAt: { gte: startOfLastMonth, lte: endOfLastMonth },
-        },
-      }),
-
-      // Orders this month
-      db.order.count({
-        where: { createdAt: { gte: startOfMonth } },
-      }),
-      // Orders last month
-      db.order.count({
-        where: {
-          createdAt: { gte: startOfLastMonth, lte: endOfLastMonth },
-        },
-      }),
+      // Gesamtzahl User
+      supabase.from("users").select("*", { count: "exact", head: true }),
+      
+      // Verifizierte Directors
+      supabase
+        .from("director_profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("is_verified", true),
+      
+      // Gesamtzahl Orders
+      supabase.from("orders").select("*", { count: "exact", head: true }),
+      
+      // Ausstehende Director-Verifizierungen
+      supabase
+        .from("director_verifications")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "PENDING"),
+      
+      // Ausstehende Musik-Freigaben
+      supabase
+        .from("music_approvals")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "PENDING"),
+      
+      // Offene Disputes
+      supabase
+        .from("orders")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "DISPUTED"),
+      
+      // Gesamtumsatz
+      supabase
+        .from("invoices")
+        .select("total")
+        .eq("status", "COMPLETED"),
     ]);
 
-    // Calculate growth percentages
-    const userGrowth = newUsersLastMonth > 0
-      ? ((newUsersThisMonth - newUsersLastMonth) / newUsersLastMonth) * 100
-      : newUsersThisMonth > 0 ? 100 : 0;
+    // Umsatz berechnen
+    const totalRevenue = invoicesResult.data?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0;
 
-    const orderGrowth = ordersLastMonth > 0
-      ? ((ordersThisMonth - ordersLastMonth) / ordersLastMonth) * 100
-      : ordersThisMonth > 0 ? 100 : 0;
+    // Monatlicher Umsatz (letzte 30 Tage)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Get recent activity
-    const recentOrders = await db.order.findMany({
-      take: 5,
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        createdAt: true,
-        customer: {
-          select: { name: true },
-        },
-      },
-    });
+    const { data: monthlyInvoices } = await supabase
+      .from("invoices")
+      .select("total")
+      .eq("status", "COMPLETED")
+      .gte("created_at", thirtyDaysAgo.toISOString());
 
-    const recentUsers = await db.user.findMany({
-      take: 5,
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-      },
-    });
+    const monthlyRevenue = monthlyInvoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0;
 
     return NextResponse.json({
-      overview: {
-        totalUsers,
-        totalDirectors,
-        totalCustomers,
-        totalMusic,
-        totalOrders,
-        completedOrders,
-        conversionRate: totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0,
-      },
-      growth: {
-        users: {
-          current: newUsersThisMonth,
-          previous: newUsersLastMonth,
-          percentage: Math.round(userGrowth * 10) / 10,
-        },
-        orders: {
-          current: ordersThisMonth,
-          previous: ordersLastMonth,
-          percentage: Math.round(orderGrowth * 10) / 10,
-        },
-      },
-      recentActivity: {
-        orders: recentOrders,
-        users: recentUsers,
-      },
+      totalUsers: usersResult.count || 0,
+      totalDirectors: directorsResult.count || 0,
+      totalOrders: ordersResult.count || 0,
+      totalRevenue,
+      monthlyRevenue,
+      pendingVerifications: pendingDirectorsResult.count || 0,
+      pendingMusicApprovals: pendingMusicResult.count || 0,
+      openDisputes: disputesResult.count || 0,
     });
   } catch (error) {
-    console.error("[ADMIN_STATS_GET]", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Laden der Statistiken");
   }
 }

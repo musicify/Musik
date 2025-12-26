@@ -1,111 +1,127 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, handleApiError, getDirectorProfile } from "@/lib/api/auth-helper";
 
-// POST - Complete order (After payment)
+// POST - Auftrag abschließen (nach Zahlung)
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const userId = req.headers.get("x-user-id");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 }
-      );
+    const authResult = await requireAuth();
+    if (authResult.error) {
+      return authResult.error;
     }
 
-    const order = await db.order.findUnique({
-      where: { id },
-      include: {
-        director: true,
-        chat: true,
-      },
-    });
+    const user = authResult.user;
+    const { id } = await params;
+    const supabase = await createClient();
 
-    if (!order) {
+    // Prüfe ob Bestellung existiert
+    const { data: order, error: findError } = await supabase
+      .from("orders")
+      .select("id, customer_id, director_id, status, final_music_url, offered_price")
+      .eq("id", id)
+      .single();
+
+    if (findError || !order) {
       return NextResponse.json(
-        { error: "Auftrag nicht gefunden" },
+        { error: "Bestellung nicht gefunden" },
         { status: 404 }
       );
     }
 
-    if (order.customerId !== userId) {
+    // Prüfe Berechtigung (Customer oder Admin)
+    const isCustomer = order.customer_id === user.id;
+    const isAdmin = user.role === "ADMIN";
+
+    if (!isCustomer && !isAdmin) {
       return NextResponse.json(
         { error: "Keine Berechtigung" },
         { status: 403 }
       );
     }
 
+    // Nur PAID Aufträge können abgeschlossen werden
     if (order.status !== "PAID") {
       return NextResponse.json(
-        { error: "Auftrag muss erst bezahlt werden" },
+        { error: "Bestellung muss bezahlt sein" },
         { status: 400 }
       );
     }
 
-    // Update order
-    const updatedOrder = await db.order.update({
-      where: { id },
-      data: {
+    // Bestellung aktualisieren
+    const { data: updated, error: updateError } = await supabase
+      .from("orders")
+      .update({
         status: "COMPLETED",
-      },
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (updateError) {
+      return NextResponse.json(
+        { error: "Fehler beim Abschließen" },
+        { status: 500 }
+      );
+    }
+
+    // History-Eintrag
+    await supabase.from("order_history").insert({
+      order_id: id,
+      status: "COMPLETED",
+      message: "Auftrag erfolgreich abgeschlossen",
+      changed_by: user.id,
     });
 
-    // Add system message to chat
-    if (order.chat) {
-      await db.chatMessage.create({
-        data: {
-          chatId: order.chat.id,
-          senderId: userId,
-          content: "✅ Auftrag abgeschlossen! Vielen Dank für die Zusammenarbeit.",
-          isSystemMessage: true,
-        },
+    // Download-Eintrag erstellen
+    if (order.final_music_url) {
+      await supabase.from("downloads").insert({
+        user_id: order.customer_id,
+        order_id: id,
+        license_type: "COMMERCIAL",
+        download_url: order.final_music_url,
       });
     }
 
-    // Log history
-    await db.orderHistory.create({
-      data: {
-        orderId: id,
-        status: "COMPLETED",
-        message: "Auftrag erfolgreich abgeschlossen",
-        changedBy: userId,
-      },
-    });
+    // Director-Statistiken aktualisieren
+    if (order.director_id) {
+      const { data: directorProfile } = await supabase
+        .from("director_profiles")
+        .select("total_projects, total_earnings")
+        .eq("id", order.director_id)
+        .single();
 
-    // Update director stats
-    if (order.directorId && order.offeredPrice) {
-      await db.directorProfile.update({
-        where: { id: order.directorId },
-        data: {
-          totalProjects: { increment: 1 },
-          totalEarnings: { increment: order.offeredPrice },
-        },
+      if (directorProfile) {
+        await supabase
+          .from("director_profiles")
+          .update({
+            total_projects: (directorProfile.total_projects || 0) + 1,
+            total_earnings: (directorProfile.total_earnings || 0) + (order.offered_price || 0),
+          })
+          .eq("id", order.director_id);
+      }
+    }
+
+    // Chat-Nachricht
+    const { data: chat } = await supabase
+      .from("chats")
+      .select("id")
+      .eq("order_id", id)
+      .single();
+
+    if (chat) {
+      await supabase.from("chat_messages").insert({
+        chat_id: chat.id,
+        sender_id: user.id,
+        content: "🎉 Auftrag erfolgreich abgeschlossen! Vielen Dank für die Zusammenarbeit.",
+        is_system_message: true,
       });
     }
 
-    // Create download record
-    if (order.finalMusicUrl) {
-      await db.download.create({
-        data: {
-          userId: order.customerId,
-          orderId: id,
-          licenseType: "COMMERCIAL",
-          downloadUrl: order.finalMusicUrl,
-        },
-      });
-    }
-
-    return NextResponse.json(updatedOrder);
+    return NextResponse.json(updated);
   } catch (error) {
-    console.error("Error completing order:", error);
-    return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Abschließen");
   }
 }
-

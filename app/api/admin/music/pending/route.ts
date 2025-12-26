@@ -1,58 +1,60 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { createClient } from "@/lib/supabase/server";
+import { requireAdmin, handleApiError } from "@/lib/api/auth-helper";
 
-// GET - Get pending music approvals (Admin only)
+// GET - Ausstehende Musik-Freigaben
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.headers.get("x-user-id");
+    const authResult = await requireAdmin();
+    if (authResult.error) {
+      return authResult.error;
+    }
 
-    if (!userId) {
+    const supabase = await createClient();
+
+    const { data: pendingMusic, error } = await supabase
+      .from("music_approvals")
+      .select(`
+        id,
+        status,
+        review_note,
+        created_at,
+        music:music (
+          id,
+          title,
+          description,
+          duration,
+          price,
+          audio_url,
+          preview_url,
+          cover_image,
+          genre,
+          mood,
+          created_at,
+          director:director_profiles (
+            id,
+            badges,
+            user:users (
+              name,
+              email,
+              image
+            )
+          )
+        )
+      `)
+      .eq("status", "PENDING")
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Pending Music Error:", error);
       return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 }
+        { error: "Fehler beim Laden" },
+        { status: 500 }
       );
     }
 
-    // Check if user is admin
-    const user = await db.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (user?.role !== "ADMIN") {
-      return NextResponse.json(
-        { error: "Keine Berechtigung" },
-        { status: 403 }
-      );
-    }
-
-    const pendingMusic = await db.musicApproval.findMany({
-      where: { status: "PENDING" },
-      include: {
-        music: {
-          include: {
-            director: {
-              include: {
-                user: {
-                  select: {
-                    name: true,
-                    image: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      orderBy: { createdAt: "asc" },
-    });
-
-    return NextResponse.json(pendingMusic);
+    return NextResponse.json(pendingMusic || []);
   } catch (error) {
-    console.error("Error fetching pending music:", error);
-    return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Fehler beim Laden der ausstehenden Musik");
   }
 }
-
