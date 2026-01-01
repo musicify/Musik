@@ -4,6 +4,10 @@ export default function SignUpPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900">
       <SignUp
+        routing="path"
+        path="/sign-up"
+        signInUrl="/sign-in"
+        afterSignUpUrl="/choose-role"
         appearance={{
           elements: {
             rootBox: "mx-auto",

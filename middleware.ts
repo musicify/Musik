@@ -17,6 +17,11 @@ const isPublicRoute = createRouteMatcher([
   "/api/directors",
 ]);
 
+// Authentifizierte Routen, die für alle Rollen zugänglich sind
+const isAuthenticatedRoute = createRouteMatcher([
+  "/choose-role",
+]);
+
 // Admin-only Routen
 const isAdminRoute = createRouteMatcher([
   "/admin(.*)",
@@ -32,6 +37,12 @@ const isDirectorRoute = createRouteMatcher([
 export default clerkMiddleware(async (auth, request) => {
   // Öffentliche Routen erlauben
   if (isPublicRoute(request)) {
+    return;
+  }
+
+  // Authentifizierte Routen (für alle Rollen zugänglich)
+  if (isAuthenticatedRoute(request)) {
+    await auth.protect();
     return;
   }
 
